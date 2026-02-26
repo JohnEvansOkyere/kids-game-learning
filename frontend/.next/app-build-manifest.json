@@ -45,6 +45,21 @@
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/parent/dashboard/page.js"
+    ],
+    "/games/number-pop/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/games/number-pop/page.js"
+    ],
+    "/games/counting-catch/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/games/counting-catch/page.js"
+    ],
+    "/battle/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/battle/page.js"
     ]
   }
 }

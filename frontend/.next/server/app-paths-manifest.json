@@ -1,7 +1,7 @@
 {
-  "/student/select/page": "app/student/select/page.js",
   "/dashboard/page": "app/dashboard/page.js",
   "/practice/page": "app/practice/page.js",
-  "/login/page": "app/login/page.js",
-  "/parent/dashboard/page": "app/parent/dashboard/page.js"
+  "/games/number-pop/page": "app/games/number-pop/page.js",
+  "/games/counting-catch/page": "app/games/counting-catch/page.js",
+  "/battle/page": "app/battle/page.js"
 }

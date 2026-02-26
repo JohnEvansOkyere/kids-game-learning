@@ -54,7 +54,7 @@ export default function DashboardPage() {
                                 Practice Mode
                             </h3>
                             <p className="text-gray-600">
-                                Practice math problems at your own pace
+                                Cross the river! Answer math questions to step on stones.
                             </p>
                             <p className="text-sm text-gray-500 mt-4">
                                 Tap to start practicing
@@ -64,19 +64,56 @@ export default function DashboardPage() {
                         <Card
                             colorful
                             className="text-center p-8 hover:scale-105 transition-transform cursor-pointer"
-                            onClick={() =>
-                                alert("Battle Mode is coming soon in Phase 3! 🚀")
-                            }
+                            onClick={() => router.push("/battle")}
                         >
                             <div className="text-6xl mb-4">⚔️</div>
                             <h3 className="text-2xl font-bold text-primary mb-2">
                                 Battle Mode
                             </h3>
                             <p className="text-gray-600">
-                                Challenge friends in math battles!
+                                Tug of war! Two players, same question — first correct pulls the rope!
                             </p>
                             <p className="text-sm text-gray-500 mt-4">
-                                Coming in Phase 3!
+                                Tap to play
+                            </p>
+                        </Card>
+                    </div>
+
+                    <h3 className="text-2xl font-bold text-primary mt-10 mb-4 text-center">
+                        🎮 Fun Games
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <Card
+                            colorful
+                            className="text-center p-8 hover:scale-105 transition-transform cursor-pointer"
+                            onClick={() => router.push("/games/counting-catch")}
+                        >
+                            <div className="text-6xl mb-4">🌟</div>
+                            <h3 className="text-2xl font-bold text-primary mb-2">
+                                Counting Catch
+                            </h3>
+                            <p className="text-gray-600">
+                                Catch falling stars! Tap each star to catch it. Can you catch 10?
+                            </p>
+                            <p className="text-sm text-gray-500 mt-4">
+                                Tap to play
+                            </p>
+                        </Card>
+
+                        <Card
+                            colorful
+                            className="text-center p-8 hover:scale-105 transition-transform cursor-pointer"
+                            onClick={() => router.push("/games/number-pop")}
+                        >
+                            <div className="text-6xl mb-4">🔢</div>
+                            <h3 className="text-2xl font-bold text-primary mb-2">
+                                Number Pop
+                            </h3>
+                            <p className="text-gray-600">
+                                Tap the numbers in order: 1, 2, 3… up to 10!
+                            </p>
+                            <p className="text-sm text-gray-500 mt-4">
+                                Tap to play
                             </p>
                         </Card>
 

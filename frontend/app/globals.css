@@ -106,4 +106,17 @@
   .animate-pulse-glow {
     animation: pulse-glow 2s ease-in-out infinite;
   }
+
+  @keyframes star-fall {
+    from {
+      transform: translateX(-50%) translateY(0);
+    }
+    to {
+      transform: translateX(-50%) translateY(420px);
+    }
+  }
+
+  .animate-star-fall {
+    animation: star-fall linear forwards;
+  }
 }
