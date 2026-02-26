@@ -1,0 +1,120 @@
+// Prisma Schema for MathChampions Ghana
+// Database: PostgreSQL
+
+generator client {
+  provider             = "prisma-client-py"
+  recursive_type_depth = 5
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Base user model for authentication
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  
+  // Relations
+  parent       Parent?
+  
+  @@map("users")
+}
+
+// Parent profile
+model Parent {
+  id          String   @id @default(uuid())
+  userId      String   @unique @map("user_id")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  phoneNumber String   @map("phone_number")
+  createdAt   DateTime @default(now()) @map("created_at")
+  
+  // Relations
+  students    Student[]
+  
+  @@map("parents")
+}
+
+// Student (child) profile
+model Student {
+  id          String   @id @default(uuid())
+  parentId    String   @map("parent_id")
+  parent      Parent   @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  name        String
+  avatar      String   // lion, elephant, cheetah, monkey, eagle, fish
+  gradeLevel  String   @map("grade_level") // KG1, KG2, P1, P2, P3
+  dateOfBirth DateTime @map("date_of_birth") @db.Date
+  createdAt   DateTime @default(now()) @map("created_at")
+  
+  // Relations
+  gameSessions GameSession[]
+  
+  @@map("students")
+}
+
+// Question bank for math problems
+model Question {
+  id            String   @id @default(uuid())
+  topic         String   // counting, addition, subtraction, multiplication
+  gradeLevel    String   @map("grade_level") // KG1, KG2, P1, P2, P3
+  difficulty    Int      // 1-5
+  questionText  String   @map("question_text") @db.Text
+  correctAnswer Int      @map("correct_answer")
+  option1       Int
+  option2       Int
+  option3       Int
+  option4       Int
+  explanation   String?  @db.Text
+  imageUrl      String?  @map("image_url")
+  createdAt     DateTime @default(now()) @map("created_at")
+  
+  // Relations
+  answers       Answer[]
+  
+  @@map("questions")
+}
+
+// Game session (practice or battle)
+model GameSession {
+  id              String    @id @default(uuid())
+  studentId       String    @map("student_id")
+  student         Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  sessionType     String    @map("session_type") // practice, battle
+  topic           String
+  gradeLevel      String    @map("grade_level")
+  totalQuestions  Int       @map("total_questions")
+  correctAnswers  Int       @default(0) @map("correct_answers")
+  wrongAnswers    Int       @default(0) @map("wrong_answers")
+  totalTimeSpent  Int       @default(0) @map("total_time_spent") // seconds
+  starsEarned     Int       @default(0) @map("stars_earned")
+  completed       Boolean   @default(false)
+  startedAt       DateTime  @default(now()) @map("started_at")
+  completedAt     DateTime? @map("completed_at")
+  
+  // Relations
+  answers         Answer[]
+  
+  @@map("game_sessions")
+}
+
+// Individual answer record
+model Answer {
+  id             String      @id @default(uuid())
+  sessionId      String      @map("session_id")
+  session        GameSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  questionId     String      @map("question_id")
+  question       Question    @relation(fields: [questionId], references: [id])
+  selectedAnswer Int         @map("selected_answer")
+  isCorrect      Boolean     @map("is_correct")
+  timeSpent      Int         @map("time_spent") // seconds
+  answeredAt     DateTime    @default(now()) @map("answered_at")
+  
+  @@unique([sessionId, questionId])
+  
+  @@map("answers")
+}
