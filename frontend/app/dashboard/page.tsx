@@ -61,7 +61,13 @@ export default function DashboardPage() {
                             </p>
                         </Card>
 
-                        <Card colorful className="text-center p-8 hover:scale-105 transition-transform cursor-pointer">
+                        <Card
+                            colorful
+                            className="text-center p-8 hover:scale-105 transition-transform cursor-pointer"
+                            onClick={() =>
+                                alert("Battle Mode is coming soon in Phase 3! 🚀")
+                            }
+                        >
                             <div className="text-6xl mb-4">⚔️</div>
                             <h3 className="text-2xl font-bold text-primary mb-2">
                                 Battle Mode

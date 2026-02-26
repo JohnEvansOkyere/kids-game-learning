@@ -28,8 +28,8 @@ export default function LoginPage() {
             localStorage.setItem("parent", JSON.stringify(response.parent));
             localStorage.setItem("students", JSON.stringify(response.students));
 
-            // Redirect to student selection
-            router.push("/student/select");
+            // Redirect to parent dashboard
+            router.push("/parent/dashboard");
         } catch (err) {
             setError(getErrorMessage(err));
         } finally {

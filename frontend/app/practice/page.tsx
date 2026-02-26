@@ -1,21 +1,33 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Header from "@/components/layout/Header";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { practiceApi, getErrorMessage } from "@/lib/api";
+import RiverGameCanvas, { RiverGameHandle } from "./RiverGameCanvas";
+import {
+    playCorrectSFX,
+    playWrongSFX,
+    playGameOverSFX,
+    playVictorySFX,
+    playSplashSFX,
+    startBackgroundMusic,
+    stopBackgroundMusic,
+} from "./GameAudio";
 import type {
     AnswerSubmitResponse,
     PracticeCompleteResponse,
     Question,
     Student,
     Topic,
+    AvatarType,
 } from "@/lib/types";
 
 const QUESTION_TIME_SECONDS = 30;
 const QUESTIONS_PER_SESSION = 10;
+const MAX_LIVES = 3;
 
 const topics: Array<{ id: Topic; label: string; icon: string; grades: string }> = [
     { id: "counting", label: "Counting", icon: "🔢", grades: "KG1-KG2" },
@@ -23,30 +35,6 @@ const topics: Array<{ id: Topic; label: string; icon: string; grades: string }> 
     { id: "subtraction", label: "Subtraction", icon: "➖", grades: "KG2-P3" },
     { id: "multiplication", label: "Multiplication", icon: "✖️", grades: "P2-P3" },
 ];
-
-function playTone(frequency: number, durationMs: number) {
-    try {
-        const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-        const context = new AudioContext();
-        const oscillator = context.createOscillator();
-        const gainNode = context.createGain();
-
-        oscillator.type = "sine";
-        oscillator.frequency.value = frequency;
-        gainNode.gain.value = 0.1;
-
-        oscillator.connect(gainNode);
-        gainNode.connect(context.destination);
-
-        oscillator.start();
-        setTimeout(() => {
-            oscillator.stop();
-            context.close();
-        }, durationMs);
-    } catch {
-        // Audio is optional; ignore failures
-    }
-}
 
 function getCacheKey(topic: Topic, gradeLevel: string) {
     return `practice_cache_${topic}_${gradeLevel}`;
@@ -64,6 +52,25 @@ type PendingAnswer = {
 type PendingCompletion = {
     sessionId: string;
 };
+
+function getAvatarNickname(avatar: AvatarType): string {
+    switch (avatar) {
+        case "lion":
+            return "Kojo the Lion";
+        case "elephant":
+            return "Ama the Elephant";
+        case "cheetah":
+            return "Yaw the Cheetah";
+        case "monkey":
+            return "Kofi the Monkey";
+        case "eagle":
+            return "Abena the Eagle";
+        case "fish":
+            return "Esi the Fish";
+        default:
+            return "Kojo the Lion";
+    }
+}
 
 export default function PracticePage() {
     const router = useRouter();
@@ -84,8 +91,15 @@ export default function PracticePage() {
     const [error, setError] = useState("");
     const [offline, setOffline] = useState(false);
     const [results, setResults] = useState<PracticeCompleteResponse | null>(null);
+    const [endedByLives, setEndedByLives] = useState(false);
 
+    const riverGameRef = useRef<RiverGameHandle | null>(null);
     const questionStartTimeRef = useRef<number>(Date.now());
+
+    // Refs to track running totals (fixes stale closure in finalizeSession)
+    const correctRef = useRef(0);
+    const wrongRef = useRef(0);
+    const timeRef = useRef(0);
 
     const currentQuestion = questions[currentIndex];
 
@@ -102,6 +116,16 @@ export default function PracticePage() {
             router.push("/student/select");
         }
     }, [router]);
+
+    // Start/stop background music when game step changes
+    useEffect(() => {
+        if (step === "game") {
+            startBackgroundMusic();
+        } else {
+            stopBackgroundMusic();
+        }
+        return () => stopBackgroundMusic();
+    }, [step]);
 
     useEffect(() => {
         setOffline(!navigator.onLine);
@@ -197,6 +221,11 @@ export default function PracticePage() {
         setError("");
         setTopic(selectedTopic);
 
+        // Reset refs
+        correctRef.current = 0;
+        wrongRef.current = 0;
+        timeRef.current = 0;
+
         try {
             const response = await practiceApi.start({
                 studentId: student.id,
@@ -216,6 +245,7 @@ export default function PracticePage() {
             setSelectedAnswer(null);
             setAnswerResult(null);
             setResults(null);
+            setEndedByLives(false);
         } catch (err) {
             const cached = loadCachedQuestions(selectedTopic, student.gradeLevel);
             if (cached.length) {
@@ -230,6 +260,7 @@ export default function PracticePage() {
                 setSelectedAnswer(null);
                 setAnswerResult(null);
                 setResults(null);
+                setEndedByLives(false);
             } else {
                 setError(getErrorMessage(err));
             }
@@ -257,13 +288,32 @@ export default function PracticePage() {
     const handleAnswer = async (answer: number | null) => {
         if (!currentQuestion || selectedAnswer !== null) return;
 
-        const timeSpent = Math.max(1, Math.round((Date.now() - questionStartTimeRef.current) / 1000));
+        const timeSpent = Math.max(
+            1,
+            Math.round((Date.now() - questionStartTimeRef.current) / 1000)
+        );
         const chosen = answer ?? -1;
+        const isWrong = chosen !== currentQuestion.correctAnswer;
+
+        // Update refs immediately (never stale)
+        if (!isWrong) {
+            correctRef.current += 1;
+        } else {
+            wrongRef.current += 1;
+        }
+        timeRef.current += timeSpent;
+
+        const newWrongCount = wrongRef.current;
+        const livesAfter = Math.max(0, MAX_LIVES - newWrongCount);
+
         setSelectedAnswer(chosen);
-        setTotalTimeSpent((prev) => prev + timeSpent);
+        setTotalTimeSpent(timeRef.current);
+
+        // Trigger river animation
+        riverGameRef.current?.handleAnswerResult(!isWrong);
 
         if (offline || !sessionId || sessionId.startsWith("offline-")) {
-            const isCorrect = chosen === currentQuestion.correctAnswer;
+            const isCorrect = !isWrong;
             const result: AnswerSubmitResponse = {
                 correct: isCorrect,
                 correctAnswer: currentQuestion.correctAnswer,
@@ -271,11 +321,12 @@ export default function PracticePage() {
             };
             setAnswerResult(result);
             if (isCorrect) {
-                setCorrectCount((prev) => prev + 1);
-                playTone(880, 200);
+                setCorrectCount(correctRef.current);
+                playCorrectSFX();
             } else {
-                setWrongCount((prev) => prev + 1);
-                playTone(220, 200);
+                setWrongCount(wrongRef.current);
+                playWrongSFX();
+                playSplashSFX();
             }
 
             if (!sessionId?.startsWith("offline-")) {
@@ -297,11 +348,12 @@ export default function PracticePage() {
 
                 setAnswerResult(result);
                 if (result.correct) {
-                    setCorrectCount((prev) => prev + 1);
-                    playTone(880, 200);
+                    setCorrectCount(correctRef.current);
+                    playCorrectSFX();
                 } else {
-                    setWrongCount((prev) => prev + 1);
-                    playTone(220, 200);
+                    setWrongCount(wrongRef.current);
+                    playWrongSFX();
+                    playSplashSFX();
                 }
             } catch {
                 queueAnswer({
@@ -310,7 +362,7 @@ export default function PracticePage() {
                     answer: chosen,
                     timeSpent,
                 });
-                const isCorrect = chosen === currentQuestion.correctAnswer;
+                const isCorrect = !isWrong;
                 const result: AnswerSubmitResponse = {
                     correct: isCorrect,
                     correctAnswer: currentQuestion.correctAnswer,
@@ -318,63 +370,79 @@ export default function PracticePage() {
                 };
                 setAnswerResult(result);
                 if (isCorrect) {
-                    setCorrectCount((prev) => prev + 1);
-                    playTone(880, 200);
+                    setCorrectCount(correctRef.current);
+                    playCorrectSFX();
                 } else {
-                    setWrongCount((prev) => prev + 1);
-                    playTone(220, 200);
+                    setWrongCount(wrongRef.current);
+                    playWrongSFX();
+                    playSplashSFX();
                 }
             }
         }
 
+        const isGameOverByLives = livesAfter <= 0;
+
         setTimeout(() => {
-            if (currentIndex + 1 < questions.length) {
+            if (isGameOverByLives) {
+                finalizeSession(true);
+            } else if (currentIndex + 1 < questions.length) {
                 setCurrentIndex((prev) => prev + 1);
                 setSelectedAnswer(null);
                 setAnswerResult(null);
             } else {
-                finalizeSession();
+                finalizeSession(false);
             }
         }, 1500);
     };
 
-    const finalizeSession = async () => {
+    const finalizeSession = async (endedBecauseOfLives: boolean) => {
         if (!sessionId) return;
 
-        if (sessionId.startsWith("offline-") || offline) {
-            const summary: PracticeCompleteResponse = {
-                totalQuestions: questions.length,
-                correctAnswers: correctCount,
-                wrongAnswers: wrongCount,
-                totalTimeSpent,
-                starsEarned: Math.max(10, Math.round((correctCount / questions.length) * 50)),
-                accuracy: questions.length ? Math.round((correctCount / questions.length) * 100) : 0,
-            };
-            setResults(summary);
-            setStep("results");
-            playTone(660, 400);
-            return;
-        }
+        stopBackgroundMusic();
+        setEndedByLives(endedBecauseOfLives);
 
-        try {
-            const completion = await practiceApi.complete({ sessionId });
-            setResults(completion);
-        } catch {
-            queueCompletion({ sessionId });
-            const summary: PracticeCompleteResponse = {
-                totalQuestions: questions.length,
-                correctAnswers: correctCount,
-                wrongAnswers: wrongCount,
-                totalTimeSpent,
-                starsEarned: Math.max(10, Math.round((correctCount / questions.length) * 50)),
-                accuracy: questions.length ? Math.round((correctCount / questions.length) * 100) : 0,
-            };
-            setResults(summary);
-        } finally {
-            setStep("results");
-            playTone(660, 400);
+        // Always use local refs for results (server values may lag behind)
+        const finalCorrect = correctRef.current;
+        const finalWrong = wrongRef.current;
+        const finalTime = timeRef.current;
+        const totalAnswered = finalCorrect + finalWrong;
+        const summary = buildSummary(totalAnswered, finalCorrect, finalWrong, finalTime);
+        setResults(summary);
+        setStep("results");
+
+        if (endedBecauseOfLives) playGameOverSFX(); else playVictorySFX();
+
+        // Tell server session is done (fire-and-forget for tracking)
+        if (!sessionId.startsWith("offline-") && !offline) {
+            try {
+                await practiceApi.complete({ sessionId });
+            } catch {
+                queueCompletion({ sessionId });
+            }
         }
     };
+
+    function buildSummary(
+        total: number,
+        correct: number,
+        wrong: number,
+        time: number
+    ): PracticeCompleteResponse {
+        const accuracy = total ? Math.round((correct / total) * 100) : 0;
+        let stars = 10;
+        if (accuracy >= 90) stars = 50;
+        else if (accuracy >= 80) stars = 40;
+        else if (accuracy >= 70) stars = 30;
+        else if (accuracy >= 60) stars = 20;
+        return {
+            totalQuestions: total,
+            correctAnswers: correct,
+            wrongAnswers: wrong,
+            totalTimeSpent: time,
+            starsEarned: stars,
+            accuracy,
+        };
+    }
 
     if (!student) {
         return (
@@ -450,7 +518,7 @@ export default function PracticePage() {
                     <div className="max-w-3xl mx-auto">
                         <div className="flex items-center justify-between mb-4">
                             <button
-                                onClick={() => setStep("topic")}
+                                onClick={() => { stopBackgroundMusic(); setStep("topic"); }}
                                 className="text-primary font-bold hover:underline"
                             >
                                 ← Back
@@ -474,9 +542,16 @@ export default function PracticePage() {
                             </div>
                         )}
 
+                        <RiverGameCanvas ref={riverGameRef} />
+
                         <Card colorful className="text-center p-8">
-                            <div className="text-2xl font-bold text-primary mb-2">
-                                ⭐⭐⭐ {student.name}'s Practice ⭐⭐⭐
+                            <div className="text-2xl font-bold text-primary mb-1">
+                                🌊 River Crossing Adventure 🌊
+                            </div>
+                            <div className="text-lg text-gray-700 mb-4">
+                                {getAvatarNickname(student.avatar)} is helping {student.name}{" "}
+                                cross the river! Choose the right answer to step on the next
+                                stone.
                             </div>
                             <div className="text-3xl font-bold text-gray-800 mb-6">
                                 {currentQuestion.questionText}
@@ -521,8 +596,12 @@ export default function PracticePage() {
                         </Card>
 
                         <div className="flex items-center justify-between mt-6 text-lg font-bold">
-                            <div>Correct: {correctCount} ✓</div>
-                            <div>Wrong: {wrongCount} ✗</div>
+                            <div>
+                                Lives:{" "}
+                                {"❤️".repeat(Math.max(0, MAX_LIVES - wrongCount))}
+                                {"🖤".repeat(Math.min(MAX_LIVES, wrongCount))}
+                            </div>
+                            <div>Stones crossed: {correctCount} 🪨</div>
                         </div>
                     </div>
                 )}
@@ -530,21 +609,47 @@ export default function PracticePage() {
                 {step === "results" && results && (
                     <div className="max-w-3xl mx-auto">
                         <Card colorful className="text-center p-8">
-                            <h2 className="text-4xl font-bold text-primary mb-4">
-                                🎉 Great Job {student.name}! 🎉
-                            </h2>
+                            {endedByLives ? (
+                                <h2 className="text-4xl font-bold text-danger mb-4">
+                                    🐊 Oh no, {student.name}! 🐊
+                                </h2>
+                            ) : (
+                                <h2 className="text-4xl font-bold text-primary mb-4">
+                                    🎉 Great Job {student.name}! 🎉
+                                </h2>
+                            )}
+
                             <p className="text-2xl font-bold mb-4">
                                 ⭐ {results.accuracy}% Score ⭐
                             </p>
 
+                            {endedByLives && (
+                                <p className="text-xl text-danger font-bold mb-4">
+                                    The crocodile caught you! But you crossed{" "}
+                                    {results.correctAnswers} stones! 🐊🌊
+                                </p>
+                            )}
+
+                            {!endedByLives && results.accuracy >= 80 && (
+                                <p className="text-xl text-success font-bold mb-4">
+                                    You made it across the river safely! 🎉🌊
+                                </p>
+                            )}
+
+                            {!endedByLives && results.accuracy < 80 && results.accuracy > 0 && (
+                                <p className="text-xl text-primary font-bold mb-4">
+                                    You survived! Keep practicing to cross faster! 💪🌊
+                                </p>
+                            )}
+
                             <div className="text-lg text-gray-700 mb-6">
-                                <p>✓ Correct: {results.correctAnswers}/{results.totalQuestions}</p>
-                                <p>✗ Wrong: {results.wrongAnswers}/{results.totalQuestions}</p>
+                                <p>🪨 Stones crossed: {results.correctAnswers}</p>
+                                <p>💦 Slipped: {results.wrongAnswers} times</p>
                                 <p>⏱️ Total Time: {results.totalTimeSpent}s</p>
                             </div>
 
                             <div className="text-xl font-bold text-primary mb-6">
-                                🏆 Rewards Earned: +{results.starsEarned} Stars ⭐
+                                🏆 Rewards: +{results.starsEarned} Stars ⭐
                             </div>
 
                             {offline && (
@@ -555,10 +660,10 @@ export default function PracticePage() {
 
                             <div className="flex gap-4 justify-center">
                                 <Button variant="primary" onClick={() => topic && startPractice(topic)}>
-                                    Play Again
+                                    🔄 Play Again
                                 </Button>
                                 <Button variant="secondary" onClick={() => router.push("/dashboard")}>
-                                    Dashboard
+                                    🏠 Dashboard
                                 </Button>
                             </div>
                         </Card>

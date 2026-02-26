@@ -360,8 +360,34 @@ async def get_student_sessions(
             where={"studentId": student_id},
             order={"startedAt": "desc"}
         )
-        
-        return sessions
+
+        # Recompute stats from answers so history reflects actual play
+        enriched: List[GameSessionResponse] = []
+        for session in sessions:
+            answers = await db.answer.find_many(where={"sessionId": session.id})
+            correct_count = sum(1 for a in answers if a.isCorrect)
+            wrong_count = sum(1 for a in answers if not a.isCorrect)
+            total_time = sum(a.timeSpent for a in answers)
+            total_questions = session.totalQuestions or len(answers)
+
+            enriched.append(
+                GameSessionResponse(
+                    id=session.id,
+                    sessionType=session.sessionType,
+                    topic=session.topic,
+                    gradeLevel=session.gradeLevel,
+                    totalQuestions=total_questions,
+                    correctAnswers=correct_count,
+                    wrongAnswers=wrong_count,
+                    totalTimeSpent=total_time,
+                    starsEarned=session.starsEarned,
+                    completed=session.completed,
+                    startedAt=session.startedAt,
+                    completedAt=session.completedAt,
+                )
+            )
+
+        return enriched
         
     except HTTPException:
         raise

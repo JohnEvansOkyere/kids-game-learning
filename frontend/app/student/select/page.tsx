@@ -103,6 +103,15 @@ export default function StudentSelectPage() {
                             </Card>
                         )}
                     </div>
+
+                    <div className="mt-4 text-center">
+                        <button
+                            onClick={() => router.push("/parent/dashboard")}
+                            className="text-primary font-bold text-lg hover:underline"
+                        >
+                            ← Back to Parent Dashboard
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
