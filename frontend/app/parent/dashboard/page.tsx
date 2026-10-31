@@ -78,7 +78,7 @@ export default function ParentDashboardPage() {
                 const allSummaries: StudentSummary[] = [];
                 for (const s of parsedStudents) {
                     const rawSessions = await practiceApi.getSessions(s.id);
-                    const sessions = rawSessions.map((sess) => norm(sess as Record<string, unknown>));
+                    const sessions = rawSessions.map((sess) => norm(sess as unknown as Record<string, unknown>));
                     const totalSessions = sessions.length;
                     const completed = sessions.filter((sess) => sess.completed);
 
