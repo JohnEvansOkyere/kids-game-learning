@@ -3,58 +3,182 @@
 @tailwind utilities;
 
 @layer base {
-  body {
-    @apply bg-background font-playful;
+  html {
+    -webkit-text-size-adjust: 100%;
   }
-  
-  * {
-    @apply focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2;
+
+  body {
+    @apply bg-background font-body text-ink antialiased;
+    /* A soft lavender glow at the top so the cream never reads as flat */
+    background-image: radial-gradient(900px 420px at 50% -80px, #ece6ff 0%, rgb(255 248 236 / 0) 70%);
+    background-repeat: no-repeat;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-display tracking-tight;
+  }
+
+  button,
+  a,
+  [role="button"] {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Keyboard users get a clear ring. Taps and clicks leave nothing behind
+     (the old global focus ring stuck to every button after a tap). */
+  *:focus {
+    outline: none;
+  }
+  *:focus-visible {
+    outline: 3px solid rgb(90 68 242 / 0.55);
+    outline-offset: 3px;
   }
 }
 
 @layer components {
-  /* Touch-friendly button base */
+  /*
+   * Chunky 3D button. The "ledge" is a hard shadow under the face; pressing
+   * pushes the face down onto it, so it feels like a real key.
+   * Variants only set the CSS variables.
+   */
   .btn {
-    @apply min-h-touch px-6 py-3 rounded-2xl font-bold text-lg transition-all duration-200;
-    @apply active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
+    --btn-top: #ffffff;
+    --btn-bottom: #f1eeff;
+    --btn-ledge: #d3ccf3;
+    --btn-ink: #231b5c;
+    --btn-glow: 35 27 92;
+    @apply relative inline-flex items-center justify-center gap-2 min-h-touch px-6 py-3 rounded-2xl;
+    @apply font-display font-semibold text-lg leading-tight select-none;
+    color: var(--btn-ink);
+    background-image: linear-gradient(180deg, var(--btn-top), var(--btn-bottom));
+    box-shadow:
+      inset 0 2px 0 rgb(255 255 255 / 0.55),
+      0 5px 0 var(--btn-ledge),
+      0 14px 20px -10px rgb(var(--btn-glow) / 0.5);
+    transition: transform 0.09s ease, box-shadow 0.09s ease, filter 0.2s ease;
   }
-  
+
+  .btn:hover:not(:disabled) {
+    filter: brightness(1.05);
+  }
+
+  .btn:active:not(:disabled) {
+    transform: translateY(4px);
+    box-shadow:
+      inset 0 2px 0 rgb(255 255 255 / 0.35),
+      0 1px 0 var(--btn-ledge),
+      0 4px 8px -4px rgb(var(--btn-glow) / 0.5);
+  }
+
+  .btn:disabled {
+    @apply cursor-not-allowed;
+    opacity: 0.55;
+    filter: saturate(0.6);
+  }
+
   .btn-primary {
-    @apply btn bg-gradient-to-r from-primary to-primary-dark text-white;
-    @apply hover:shadow-lg hover:scale-105;
+    @apply btn;
+    --btn-top: #8b7cff;
+    --btn-bottom: #5a44f2;
+    --btn-ledge: #3524b8;
+    --btn-ink: #ffffff;
+    --btn-glow: 90 68 242;
   }
-  
+
+  /* Dark brown ink on gold: white on yellow fails contrast */
   .btn-secondary {
-    @apply btn bg-gradient-to-r from-secondary to-secondary-dark text-gray-900;
-    @apply hover:shadow-lg hover:scale-105;
+    @apply btn;
+    --btn-top: #ffe27a;
+    --btn-bottom: #ffc21a;
+    --btn-ledge: #c98600;
+    --btn-ink: #4a2b00;
+    --btn-glow: 201 134 0;
   }
-  
+
   .btn-success {
-    @apply btn bg-gradient-to-r from-success to-success-dark text-white;
-    @apply hover:shadow-lg hover:scale-105;
+    @apply btn;
+    --btn-top: #5edc96;
+    --btn-bottom: #22c06b;
+    --btn-ledge: #12904a;
+    --btn-ink: #ffffff;
+    --btn-glow: 18 144 74;
   }
-  
+
   .btn-danger {
-    @apply btn bg-gradient-to-r from-danger to-danger-dark text-white;
-    @apply hover:shadow-lg hover:scale-105;
+    @apply btn;
+    --btn-top: #ff8a7a;
+    --btn-bottom: #ff4d3d;
+    --btn-ledge: #b0261a;
+    --btn-ink: #ffffff;
+    --btn-glow: 176 38 26;
   }
-  
+
   /* Input fields */
   .input {
-    @apply w-full min-h-touch px-4 py-3 rounded-2xl border-4 border-primary;
-    @apply text-lg font-playful bg-white;
-    @apply focus:border-primary-dark focus:shadow-lg;
-    @apply transition-all duration-200;
+    @apply w-full min-h-touch px-4 py-3 rounded-2xl bg-white text-lg font-body text-ink;
+    border: 2px solid rgb(35 27 92 / 0.14);
+    box-shadow: inset 0 2px 0 rgb(35 27 92 / 0.04);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
   }
-  
-  /* Cards */
+  .input::placeholder {
+    color: rgb(35 27 92 / 0.35);
+  }
+  .input:focus {
+    border-color: #5a44f2;
+    box-shadow: 0 0 0 4px rgb(90 68 242 / 0.16);
+  }
+
+  /* Cards: white surface, hairline edge, soft ledge + long shadow. No chunky borders. */
   .card {
-    @apply bg-white rounded-3xl border-4 border-primary p-6;
-    @apply shadow-lg hover:shadow-xl transition-shadow duration-200;
+    @apply relative bg-white rounded-3xl p-6 shadow-card;
+    border: 2px solid rgb(35 27 92 / 0.06);
   }
-  
+
   .card-colorful {
-    @apply card border-4;
+    @apply card;
+  }
+
+  /* Kente-inspired strip: a quiet Ghana signature for headers and banners */
+  .kente-strip {
+    height: 5px;
+    background: repeating-linear-gradient(
+      90deg,
+      #fcd116 0 14px,
+      #1a1445 14px 18px,
+      #ce1126 18px 30px,
+      #1a1445 30px 34px,
+      #006b3f 34px 50px,
+      #1a1445 50px 54px
+    );
+  }
+
+  /* Round character plate behind an avatar */
+  .plate {
+    box-shadow:
+      inset 0 3px 0 rgb(255 255 255 / 0.55),
+      inset 0 -4px 0 rgb(0 0 0 / 0.08),
+      0 6px 0 rgb(35 27 92 / 0.18),
+      0 12px 18px -8px rgb(35 27 92 / 0.4);
+  }
+
+  /* Map node: a pressable coin sitting on the road */
+  .node-btn {
+    box-shadow:
+      inset 0 3px 0 rgb(255 255 255 / 0.5),
+      0 6px 0 var(--ledge),
+      0 14px 16px -6px rgb(0 0 0 / 0.35);
+    transition: transform 0.08s ease, box-shadow 0.08s ease;
+  }
+  .node-btn:active:not(:disabled) {
+    transform: translateY(5px);
+    box-shadow:
+      inset 0 3px 0 rgb(255 255 255 / 0.35),
+      0 1px 0 var(--ledge),
+      0 4px 8px -4px rgb(0 0 0 / 0.35);
   }
 }
 
@@ -73,7 +197,7 @@
       opacity: 1;
     }
   }
-  
+
   @keyframes shake {
     0%, 100% {
       transform: translateX(0);
@@ -85,24 +209,24 @@
       transform: translateX(10px);
     }
   }
-  
+
   @keyframes pulse-glow {
     0%, 100% {
-      box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+      box-shadow: 0 0 18px rgba(255, 194, 26, 0.55);
     }
     50% {
-      box-shadow: 0 0 40px rgba(59, 130, 246, 0.8);
+      box-shadow: 0 0 36px rgba(255, 194, 26, 0.95);
     }
   }
-  
+
   .animate-bounce-in {
     animation: bounce-in 0.5s ease-out;
   }
-  
+
   .animate-shake {
     animation: shake 0.5s ease-in-out;
   }
-  
+
   .animate-pulse-glow {
     animation: pulse-glow 2s ease-in-out infinite;
   }
@@ -199,18 +323,167 @@
     animation: fade-up 1s ease-out 0.6s both;
   }
 
+  /* Design-pass motion. Still transform/opacity only. */
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-6px);
+    }
+  }
+
+  /* An expanding ring that fades: the "tap me" beacon on the current node */
+  @keyframes ring-pulse {
+    0% {
+      transform: scale(1);
+      opacity: 0.9;
+    }
+    100% {
+      transform: scale(1.45);
+      opacity: 0;
+    }
+  }
+
+  @keyframes rays {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @keyframes star-pop {
+    0% {
+      transform: scale(0) rotate(-25deg);
+      opacity: 0;
+    }
+    60% {
+      transform: scale(1.35) rotate(8deg);
+      opacity: 1;
+    }
+    100% {
+      transform: scale(1) rotate(0deg);
+      opacity: 1;
+    }
+  }
+
+  @keyframes sheet-up {
+    from {
+      transform: translateY(40px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes drift {
+    from {
+      transform: translateX(-12%);
+    }
+    to {
+      transform: translateX(12%);
+    }
+  }
+
+  @keyframes wiggle {
+    0%, 70%, 100% {
+      transform: rotate(0deg);
+    }
+    75% {
+      transform: rotate(-12deg);
+    }
+    85% {
+      transform: rotate(10deg);
+    }
+    95% {
+      transform: rotate(-6deg);
+    }
+  }
+
+  @keyframes confetti-fall {
+    0% {
+      transform: translate3d(0, -20px, 0) rotate(0deg);
+      opacity: 1;
+    }
+    100% {
+      transform: translate3d(var(--x), 520px, 0) rotate(var(--r));
+      opacity: 0;
+    }
+  }
+
+  .animate-float {
+    animation: float 2.4s ease-in-out infinite;
+  }
+
+  .animate-ring-pulse {
+    animation: ring-pulse 1.8s ease-out infinite;
+  }
+
+  .animate-rays {
+    animation: rays 24s linear infinite;
+  }
+
+  .animate-star-pop {
+    animation: star-pop 0.55s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+  }
+
+  .animate-sheet-up {
+    animation: sheet-up 0.32s ease-out both;
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.25s ease-out both;
+  }
+
+  .animate-drift {
+    animation: drift 18s ease-in-out infinite alternate;
+  }
+
+  .animate-wiggle {
+    animation: wiggle 3.2s ease-in-out infinite;
+  }
+
+  .animate-confetti {
+    animation: confetti-fall 2.4s ease-in forwards;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .animate-coin-burst,
     .animate-pop,
     .animate-unlock,
     .animate-chest-shake,
-    .animate-fade-up {
+    .animate-fade-up,
+    .animate-float,
+    .animate-ring-pulse,
+    .animate-rays,
+    .animate-drift,
+    .animate-wiggle,
+    .animate-confetti,
+    .animate-pulse-glow {
       animation: none;
     }
 
     .animate-coin-burst,
-    .animate-fade-up {
+    .animate-fade-up,
+    .animate-confetti {
       opacity: 0;
+    }
+
+    .animate-star-pop,
+    .animate-sheet-up,
+    .animate-fade-in,
+    .animate-bounce-in {
+      animation-duration: 0.01ms;
     }
   }
 }

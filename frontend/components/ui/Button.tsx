@@ -1,10 +1,11 @@
 /**
- * Button Component - Kid-friendly, touch-optimized button
+ * Button Component - chunky 3D key, touch-optimized
  */
 import React from "react";
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-    variant?: "primary" | "secondary" | "success" | "danger";
+    // "neutral" is a white key for secondary actions and answer tiles
+    variant?: "primary" | "secondary" | "success" | "danger" | "neutral";
     children: React.ReactNode;
     fullWidth?: boolean;
 }
@@ -21,6 +22,7 @@ export default function Button({
         secondary: "btn-secondary",
         success: "btn-success",
         danger: "btn-danger",
+        neutral: "btn",
     };
 
     return (

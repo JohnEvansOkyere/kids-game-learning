@@ -1,6 +1,21 @@
 import type { Metadata, Viewport } from "next";
+import { Fredoka, Nunito } from "next/font/google";
 import "./globals.css";
 import ServiceWorker from "@/components/pwa/ServiceWorker";
+
+// next/font downloads these at build time and serves them from our own origin,
+// so the offline service worker can keep them. latin-ext covers Twi (ɛ, ɔ) for later.
+const display = Fredoka({
+    subsets: ["latin", "latin-ext"],
+    variable: "--font-display",
+    display: "swap",
+});
+
+const body = Nunito({
+    subsets: ["latin", "latin-ext"],
+    variable: "--font-body",
+    display: "swap",
+});
 
 export const metadata: Metadata = {
     title: "MathChampions Ghana 🇬🇭",
@@ -22,7 +37,9 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-    themeColor: "#3B82F6",
+    themeColor: "#5A44F2",
+    // Lets the bottom dock sit above the iPhone home bar (env(safe-area-inset-bottom))
+    viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -31,7 +48,7 @@ export default function RootLayout({
     children: React.ReactNode;
 }) {
     return (
-        <html lang="en">
+        <html lang="en" className={`${display.variable} ${body.variable}`}>
             <body>
                 {children}
                 <ServiceWorker />

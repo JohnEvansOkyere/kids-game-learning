@@ -67,10 +67,11 @@ const RiverGameCanvas = forwardRef<RiverGameHandle>((_props, ref) => {
     }, []);
 
     return (
-        <div className="w-full flex justify-center mb-6">
+        <div className="mb-4 flex w-full justify-center">
+            {/* Sky-coloured while Phaser loads, so there is no blank flash */}
             <div
                 ref={containerRef}
-                className="w-full max-w-4xl rounded-3xl overflow-hidden shadow-2xl border-4 border-green-600"
+                className="w-full max-w-4xl overflow-hidden rounded-3xl bg-gradient-to-b from-sky-300 to-sky-500 shadow-card ring-4 ring-white"
                 style={{ aspectRatio: "900/400" }}
             />
         </div>

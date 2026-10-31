@@ -2,16 +2,29 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Header from "@/components/layout/Header";
-import Card from "@/components/ui/Card";
 import Avatar from "@/components/ui/Avatar";
 import InstallPrompt from "@/components/pwa/InstallPrompt";
+import { CoinIcon, LogoMark, StarIcon } from "@/components/ui/Icons";
 import { studentsApi } from "@/lib/api";
-import type { Student } from "@/lib/types";
+import type { Student, World } from "@/lib/types";
+
+/** Stars and coins from the copy of the world kept on this device, if the child has played here */
+function cachedProgress(studentId: string): { stars: number; coins: number } | null {
+    try {
+        const raw = localStorage.getItem(`world_${studentId}`);
+        if (!raw) return null;
+        const world = JSON.parse(raw) as World;
+        const stars = world.zones.flatMap((z) => z.nodes).reduce((sum, n) => sum + n.stars, 0);
+        return { stars, coins: world.coins };
+    } catch {
+        return null;
+    }
+}
 
 export default function StudentSelectPage() {
     const router = useRouter();
     const [students, setStudents] = useState<Student[]>([]);
+    const [progress, setProgress] = useState<Record<string, { stars: number; coins: number }>>({});
 
     useEffect(() => {
         const token = localStorage.getItem("token");
@@ -36,6 +49,15 @@ export default function StudentSelectPage() {
         loadStudents();
     }, [router]);
 
+    useEffect(() => {
+        const found: Record<string, { stars: number; coins: number }> = {};
+        for (const s of students) {
+            const p = cachedProgress(s.id);
+            if (p) found[s.id] = p;
+        }
+        setProgress(found);
+    }, [students]);
+
     const handleSelectStudent = (student: Student) => {
         // Store selected student
         localStorage.setItem("selectedStudent", JSON.stringify(student));
@@ -48,73 +70,85 @@ export default function StudentSelectPage() {
     };
 
     return (
-        <div className="min-h-screen bg-background">
-            <Header />
+        <div className="relative min-h-screen overflow-hidden bg-night text-white">
+            <div
+                aria-hidden
+                className="pointer-events-none absolute inset-0"
+                style={{
+                    backgroundImage:
+                        "radial-gradient(640px 360px at 50% -40px, rgb(90 68 242 / 0.55), transparent 70%), radial-gradient(520px 320px at 100% 100%, rgb(255 194 26 / 0.14), transparent 70%)",
+                }}
+            />
 
-            <div className="container mx-auto px-4 py-8">
-                <div className="max-w-4xl mx-auto">
-                    <div className="text-center mb-8">
-                        <h2 className="text-4xl font-bold text-primary mb-2">
-                            Who&apos;s Playing Today? 🎮
-                        </h2>
-                        <p className="text-xl text-gray-600">
-                            Select your child to start the math adventure!
-                        </p>
+            <div className="relative mx-auto max-w-3xl px-5 pb-16 pt-6">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                        <LogoMark size={34} />
+                        <span className="font-display text-lg font-semibold tracking-tight">MathChampions</span>
                     </div>
+                    <button
+                        type="button"
+                        onClick={() => router.push("/parent/dashboard")}
+                        className="min-h-[44px] rounded-full bg-white/10 px-4 font-display text-sm font-semibold text-white/85 transition-colors hover:bg-white/15"
+                    >
+                        Parent area
+                    </button>
+                </div>
 
+                <div className="mt-10 text-center">
+                    <h1 className="font-display text-4xl font-semibold sm:text-5xl">Who&rsquo;s playing?</h1>
+                    <p className="mt-2 text-lg font-semibold text-white/70">Tap your character to jump back in.</p>
+                </div>
+
+                <div className="mt-8">
                     <InstallPrompt />
+                </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                        {students.map((student) => (
-                            <Card
+                <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3">
+                    {students.map((student) => {
+                        const p = progress[student.id];
+                        return (
+                            <button
                                 key={student.id}
-                                colorful
-                                className="cursor-pointer hover:scale-105 transition-transform animate-bounce-in"
+                                type="button"
                                 onClick={() => handleSelectStudent(student)}
+                                className="group flex flex-col items-center gap-3 rounded-4xl bg-white/[0.06] p-5 pb-6 ring-1 ring-white/10 transition-all hover:-translate-y-1 hover:bg-white/10 active:scale-95"
                             >
-                                <div className="text-center">
-                                    <Avatar type={student.avatar} size="large" />
-                                    <h3 className="text-3xl font-bold text-primary mt-4">
-                                        {student.name}
-                                    </h3>
-                                    <p className="text-xl text-gray-600 mt-2">
-                                        Grade: {student.gradeLevel}
-                                    </p>
-                                    <div className="mt-4 pt-4 border-t-4 border-gray-200">
-                                        <p className="text-gray-500">Tap to play!</p>
-                                    </div>
-                                </div>
-                            </Card>
-                        ))}
+                                <Avatar plate type={student.avatar} size="large" />
+                                <span className="max-w-full truncate font-display text-2xl font-semibold">{student.name}</span>
+                                <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-white/75">
+                                    {student.gradeLevel}
+                                </span>
+                                {p && (
+                                    <span className="flex items-center gap-3 font-display text-sm font-semibold text-white/85">
+                                        <span className="inline-flex items-center gap-1">
+                                            <StarIcon size={18} />
+                                            {p.stars}
+                                        </span>
+                                        <span className="inline-flex items-center gap-1">
+                                            <CoinIcon size={18} />
+                                            {p.coins}
+                                        </span>
+                                    </span>
+                                )}
+                            </button>
+                        );
+                    })}
 
-                        {/* Add Child Button (if less than 4 children) */}
-                        {students.length < 4 && (
-                            <Card
-                                colorful
-                                className="cursor-pointer hover:scale-105 transition-transform border-dashed"
-                                onClick={handleAddChild}
-                            >
-                                <div className="text-center flex flex-col items-center justify-center min-h-[300px]">
-                                    <div className="text-8xl mb-4">➕</div>
-                                    <h3 className="text-2xl font-bold text-primary">
-                                        Add Another Child
-                                    </h3>
-                                    <p className="text-gray-600 mt-2">
-                                        You can add up to {4 - students.length} more
-                                    </p>
-                                </div>
-                            </Card>
-                        )}
-                    </div>
-
-                    <div className="mt-4 text-center">
+                    {/* Add Child Button (if less than 4 children) */}
+                    {students.length < 4 && (
                         <button
-                            onClick={() => router.push("/parent/dashboard")}
-                            className="text-primary font-bold text-lg hover:underline"
+                            type="button"
+                            onClick={handleAddChild}
+                            className="flex min-h-[15rem] flex-col items-center justify-center gap-3 rounded-4xl border-2 border-dashed border-white/25 p-5 text-white/80 transition-colors hover:border-white/50 hover:bg-white/5 active:scale-95"
                         >
-                            ← Back to Parent Dashboard
+                            <span className="flex h-20 w-20 items-center justify-center rounded-full bg-white/10 font-display text-5xl font-semibold leading-none">
+                                +
+                            </span>
+                            <span className="font-display text-lg font-semibold">Add a child</span>
+                            <span className="text-sm font-semibold text-white/55">{4 - students.length} more allowed</span>
                         </button>
-                    </div>
+                    )}
                 </div>
             </div>
         </div>

@@ -5,8 +5,10 @@ import { useRouter } from "next/navigation";
 import Header from "@/components/layout/Header";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
+import { CheckIcon, ChevronLeftIcon, HeartIcon, StarIcon } from "@/components/ui/Icons";
 import { practiceApi, getErrorMessage } from "@/lib/api";
 import NodeResult from "@/components/world/NodeResult";
+import RewardBurst from "@/components/world/RewardBurst";
 import { findNode, getNodeIdFromUrl, loadWorld } from "@/lib/world";
 import { cacheQuestions, pickCachedQuestions } from "@/lib/questionCache";
 import { flushOfflineSessions, recordOfflineAnswer, startOfflineSession } from "@/lib/offlineAnswers";
@@ -549,33 +551,53 @@ export default function PracticePage() {
 
                 {step === "game" && currentQuestion && (
                     <div className="max-w-3xl mx-auto">
-                        <div className="flex items-center justify-between mb-4">
+                        {/* Game HUD: back, progress, lives */}
+                        <div className="mb-3 flex items-center gap-3">
                             <button
+                                type="button"
+                                aria-label="Back"
                                 onClick={() => {
                                     stopBackgroundMusic();
                                     if (nodeId) router.push("/play");
                                     else setStep("topic");
                                 }}
-                                className="text-primary font-bold hover:underline"
+                                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white text-ink-soft shadow-lift ring-1 ring-ink/5 active:scale-95"
                             >
-                                ← Back
+                                <ChevronLeftIcon size={24} />
                             </button>
-                            <div className="text-lg font-bold">
-                                Question {currentIndex + 1}/{questions.length}
+                            <div
+                                className="h-5 flex-1 overflow-hidden rounded-full bg-ink/10 ring-1 ring-ink/5"
+                                role="progressbar"
+                                aria-valuemin={0}
+                                aria-valuemax={100}
+                                aria-valuenow={Math.round(progressPercent)}
+                            >
+                                <div
+                                    className="relative h-full rounded-full bg-gradient-to-b from-success-light to-success transition-all duration-500"
+                                    style={{ width: `${progressPercent}%` }}
+                                >
+                                    <span className="absolute inset-x-2 top-[3px] h-1 rounded-full bg-white/40" />
+                                </div>
                             </div>
-                            <div className="text-lg font-bold">⏱️ {timeLeft}s</div>
+                            <div className="flex shrink-0 items-center gap-0.5" aria-label={`${Math.max(0, MAX_LIVES - wrongCount)} lives left`}>
+                                {Array.from({ length: MAX_LIVES }, (_, i) => (
+                                    <HeartIcon key={i} size={28} filled={i < MAX_LIVES - wrongCount} />
+                                ))}
+                            </div>
                         </div>
 
-                        <div className="w-full bg-gray-200 rounded-full h-4 mb-6">
-                            <div
-                                className="bg-primary h-4 rounded-full transition-all"
-                                style={{ width: `${progressPercent}%` }}
-                            />
+                        <div className="mb-3 flex items-center justify-between px-1 font-display text-sm font-semibold text-ink-muted">
+                            <span>
+                                Question {currentIndex + 1} of {questions.length}
+                            </span>
+                            <span className={`rounded-full px-3 py-1 ${timeLeft <= 5 ? "bg-danger/15 text-danger-dark" : "bg-ink/5"}`}>
+                                {timeLeft}s
+                            </span>
                         </div>
 
                         {offline && (
-                            <div className="text-center text-danger font-bold mb-4">
-                                Playing Offline — results will sync when online
+                            <div className="mb-3 rounded-2xl bg-secondary/25 px-4 py-2 text-center text-sm font-semibold text-ink-soft">
+                                Playing offline. Your results will save when you&apos;re back online.
                             </div>
                         )}
 
@@ -589,16 +611,11 @@ export default function PracticePage() {
                                 }}
                             />
                         ) : (
-                            <Card colorful className="text-center p-8">
-                                <div className="text-2xl font-bold text-primary mb-1">
-                                    🌊 River Crossing Adventure 🌊
-                                </div>
-                                <div className="text-lg text-gray-700 mb-4">
-                                    {getAvatarNickname(student.avatar)} is helping {student.name}{" "}
-                                    cross the river! Choose the right answer to step on the next
-                                    stone.
-                                </div>
-                                <div className="text-3xl font-bold text-gray-800 mb-6">
+                            <Card colorful className="text-center !p-5 sm:!p-7">
+                                <p className="font-display text-sm font-semibold uppercase tracking-wider text-ink-muted">
+                                    🌊 {getAvatarNickname(student.avatar)} is crossing the river
+                                </p>
+                                <div className="mb-6 mt-2 font-display text-4xl font-semibold leading-tight text-ink sm:text-5xl">
                                     {currentQuestion.questionText}
                                 </div>
 
@@ -616,10 +633,13 @@ export default function PracticePage() {
                                         return (
                                             <Button
                                                 key={option}
-                                                variant={isCorrect ? "success" : isWrong ? "danger" : "secondary"}
+                                                variant={isCorrect ? "success" : isWrong ? "danger" : "neutral"}
                                                 onClick={() => handleAnswer(option)}
                                                 disabled={selectedAnswer !== null}
-                                                className={`${isSelected ? "animate-pulse" : ""}`}
+                                                // The right and wrong picks stay bright; every other key dims so the eye lands on the answer
+                                                className={`!min-h-[84px] !text-3xl ${isSelected && !answerResult ? "animate-pulse" : ""} ${
+                                                    isCorrect || isWrong ? "!opacity-100 ![filter:none]" : ""
+                                                } ${isWrong ? "animate-shake" : ""} ${isCorrect ? "animate-pop" : ""}`}
                                             >
                                                 {option}
                                             </Button>
@@ -627,82 +647,91 @@ export default function PracticePage() {
                                     })}
                                 </div>
 
-                                {answerResult && (
-                                    <div className="mt-6 text-lg font-bold">
-                                        {answerResult.correct ? (
-                                            <p className="text-success">Ayekoo! Correct ✅</p>
-                                        ) : (
-                                            <p className="text-danger">
-                                                Oops! Correct answer: {answerResult.correctAnswer}
+                                <div className="mt-5 flex min-h-[3rem] items-center justify-center">
+                                    {answerResult &&
+                                        (answerResult.correct ? (
+                                            <p className="animate-bounce-in inline-flex items-center gap-2 rounded-full bg-success/15 px-4 py-2 font-display text-lg font-semibold text-success-dark">
+                                                <CheckIcon size={18} />
+                                                Ayekoo! Correct!
                                             </p>
-                                        )}
-                                    </div>
-                                )}
+                                        ) : (
+                                            <p className="animate-bounce-in rounded-full bg-danger/10 px-4 py-2 font-display text-lg font-semibold text-danger-dark">
+                                                Not quite. The answer is {answerResult.correctAnswer}
+                                            </p>
+                                        ))}
+                                </div>
                             </Card>
                         )}
 
-                        <div className="flex items-center justify-between mt-6 text-lg font-bold">
-                            <div>
-                                Lives:{" "}
-                                {"❤️".repeat(Math.max(0, MAX_LIVES - wrongCount))}
-                                {"🖤".repeat(Math.min(MAX_LIVES, wrongCount))}
-                            </div>
-                            <div>Stones crossed: {correctCount} 🪨</div>
+                        <div className="mt-4 flex justify-center">
+                            <span className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 font-display text-base font-semibold text-ink-soft shadow-lift ring-1 ring-ink/5">
+                                🪨 Stones crossed: <span className="text-ink">{correctCount}</span>
+                            </span>
                         </div>
                     </div>
                 )}
 
                 {step === "results" && results && (
                     <div className="max-w-3xl mx-auto">
-                        <Card colorful className="text-center p-8">
+                        {/* isolate: the celebration sits behind the text but above the card's white */}
+                        <Card colorful className="relative isolate overflow-hidden text-center !p-6 sm:!p-8">
+                            {!endedByLives && <RewardBurst className="-z-10" />}
+
                             {endedByLives ? (
-                                <h2 className="text-4xl font-bold text-danger mb-4">
-                                    🐊 Oh no, {student.name}! 🐊
+                                <h2 className="mb-2 font-display text-4xl font-semibold text-danger-dark">
+                                    🐊 Oh no, {student.name}!
                                 </h2>
                             ) : (
-                                <h2 className="text-4xl font-bold text-primary mb-4">
-                                    🎉 Great Job {student.name}! 🎉
+                                <h2 className="mb-2 font-display text-4xl font-semibold text-ink">
+                                    Great job, {student.name}!
                                 </h2>
                             )}
 
-                            <p className="text-2xl font-bold mb-4">
-                                ⭐ {results.accuracy}% Score ⭐
+                            <p className="font-display text-7xl font-semibold leading-none text-primary">
+                                {results.accuracy}%
                             </p>
+                            <p className="mb-4 mt-1 text-sm font-bold uppercase tracking-wider text-ink-muted">correct</p>
 
                             {endedByLives && (
-                                <p className="text-xl text-danger font-bold mb-4">
-                                    The crocodile caught you! But you crossed{" "}
-                                    {results.correctAnswers} stones! 🐊🌊
+                                <p className="mb-4 text-lg font-semibold text-danger-dark">
+                                    The crocodile caught you, but you crossed {results.correctAnswers} stones!
                                 </p>
                             )}
 
                             {!endedByLives && results.accuracy >= 80 && (
-                                <p className="text-xl text-success font-bold mb-4">
-                                    You made it across the river safely! 🎉🌊
+                                <p className="mb-4 text-lg font-semibold text-success-dark">
+                                    You made it across the river safely!
                                 </p>
                             )}
 
                             {!endedByLives && results.accuracy < 80 && results.accuracy > 0 && (
-                                <p className="text-xl text-primary font-bold mb-4">
-                                    You survived! Keep practicing to cross faster! 💪🌊
+                                <p className="mb-4 text-lg font-semibold text-primary">
+                                    You made it! Keep practising to cross faster. 💪
                                 </p>
                             )}
 
-                            <div className="text-lg text-gray-700 mb-6">
-                                <p>🪨 Stones crossed: {results.correctAnswers}</p>
-                                <p>💦 Slipped: {results.wrongAnswers} times</p>
-                                <p>⏱️ Total Time: {results.totalTimeSpent}s</p>
+                            <div className="mb-6 grid grid-cols-3 divide-x divide-ink/10 overflow-hidden rounded-2xl bg-white/80 ring-1 ring-ink/10">
+                                {[
+                                    { label: "Stones crossed", value: results.correctAnswers },
+                                    { label: "Slipped", value: results.wrongAnswers },
+                                    { label: "Time", value: `${results.totalTimeSpent}s` },
+                                ].map((stat) => (
+                                    <div key={stat.label} className="px-2 py-3">
+                                        <p className="font-display text-2xl font-semibold text-ink">{stat.value}</p>
+                                        <p className="text-[11px] font-bold uppercase tracking-wider text-ink-muted">{stat.label}</p>
+                                    </div>
+                                ))}
                             </div>
 
                             {!node && (
-                                <div className="text-xl font-bold text-primary mb-6">
-                                    🏆 Rewards: +{results.starsEarned} Stars ⭐
+                                <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-secondary/25 px-4 py-2 font-display text-lg font-semibold text-ink">
+                                    <StarIcon size={24} />+{results.starsEarned} stars
                                 </div>
                             )}
 
                             {offline && (
-                                <p className="text-danger font-bold mb-4">
-                                    Offline session saved. Results will sync when online.
+                                <p className="mb-4 font-semibold text-ink-soft">
+                                    Offline session saved. Results will sync when you&apos;re back online.
                                 </p>
                             )}
 

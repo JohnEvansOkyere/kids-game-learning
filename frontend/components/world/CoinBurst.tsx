@@ -6,6 +6,7 @@
  * Place inside a `relative` element. Remount (change `key`) to replay.
  */
 import React from "react";
+import { CoinIcon } from "@/components/ui/Icons";
 
 const COINS = 8;
 
@@ -20,8 +21,8 @@ export default function CoinBurst() {
                     animationDelay: `${(i % 3) * 40}ms`,
                 } as React.CSSProperties;
                 return (
-                    <span key={i} className="absolute text-2xl animate-coin-burst" style={style}>
-                        🪙
+                    <span key={i} className="absolute animate-coin-burst" style={style}>
+                        <CoinIcon size={26} />
                     </span>
                 );
             })}

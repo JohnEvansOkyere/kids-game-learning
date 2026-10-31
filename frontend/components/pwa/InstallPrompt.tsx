@@ -44,13 +44,13 @@ export default function InstallPrompt() {
     };
 
     return (
-        <div className="bg-white border-4 border-primary rounded-3xl p-4 mb-6 flex flex-col sm:flex-row items-center gap-3 text-center sm:text-left">
-            <span className="text-5xl" aria-hidden>
+        <div className="mb-6 flex flex-col items-center gap-3 rounded-3xl bg-white p-4 text-center text-ink shadow-card ring-1 ring-ink/5 sm:flex-row sm:text-left">
+            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-3xl" aria-hidden>
                 📲
             </span>
             <div className="flex-1">
-                <p className="text-lg font-bold text-primary">Put MathChampions on your home screen</p>
-                <p className="text-gray-600">
+                <p className="font-display text-lg font-semibold text-ink">Put MathChampions on your home screen</p>
+                <p className="text-sm font-semibold text-ink-muted">
                     {mode === "ios"
                         ? "Tap the Share button, then “Add to Home Screen”. Open the new icon and log in once more. Your child can then play like an app, even with no data."
                         : "Your child can open it like an app, and play even when the data runs out."}
@@ -67,7 +67,7 @@ export default function InstallPrompt() {
                         Add app
                     </Button>
                 )}
-                <Button variant="secondary" onClick={notNow}>
+                <Button variant="neutral" onClick={notNow}>
                     Not now
                 </Button>
             </div>
