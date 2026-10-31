@@ -4,6 +4,8 @@ Pydantic schemas for the Adventure World
 from pydantic import BaseModel, Field
 from typing import List, Optional
 
+from app.schemas_game import QuestionWithAnswer
+
 
 class ItemResponse(BaseModel):
     id: str
@@ -78,3 +80,14 @@ class WalletResponse(BaseModel):
     totalCoins: int
     equippedItem: Optional[ItemResponse] = None
     item: ItemResponse
+
+
+class OfflineSkillPack(BaseModel):
+    skillId: str
+    topic: str
+    gradeLevel: str
+    questions: List[QuestionWithAnswer]
+
+
+class OfflinePackResponse(BaseModel):
+    skills: List[OfflineSkillPack]

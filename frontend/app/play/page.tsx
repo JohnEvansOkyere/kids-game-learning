@@ -7,7 +7,7 @@ import Button from "@/components/ui/Button";
 import CoinBurst from "@/components/world/CoinBurst";
 import { playChestOpenSFX, playChestShakeSFX, playCoinSFX, playUnlockSFX } from "@/app/practice/GameAudio";
 import { worldApi, getErrorMessage } from "@/lib/api";
-import { findCurrentNode, flushNodeCompletions, loadWorld, nodeHref, starString } from "@/lib/world";
+import { findCurrentNode, flushNodeCompletions, loadWorld, nodeHref, refreshOfflinePack, starString } from "@/lib/world";
 import { trackEvent } from "@/lib/events";
 import type { ChestResponse, Student, World, WorldItem, WorldNode, WorldZone } from "@/lib/types";
 
@@ -69,14 +69,14 @@ export default function PlayPage() {
             const seenRaw = localStorage.getItem(seenUnlockedKey(studentId));
             localStorage.setItem(seenUnlockedKey(studentId), JSON.stringify(unlockedIds));
             // First visit: everything is new, so nothing is celebrated
-            if (seenRaw) {
-                const seen = new Set<string>(JSON.parse(seenRaw));
-                const fresh = unlockedIds.filter((id) => !seen.has(id));
-                if (fresh.length) {
-                    setNewlyUnlocked(new Set(fresh));
-                    setTimeout(playUnlockSFX, 400);
-                }
+            const seen = new Set<string>(seenRaw ? JSON.parse(seenRaw) : unlockedIds);
+            const fresh = unlockedIds.filter((id) => !seen.has(id));
+            if (fresh.length) {
+                setNewlyUnlocked(new Set(fresh));
+                setTimeout(playUnlockSFX, 400);
             }
+            // A new stage needs its questions on the phone before the data runs out
+            void refreshOfflinePack(studentId, fresh.length > 0);
         } catch (err) {
             setError(getErrorMessage(err));
         }

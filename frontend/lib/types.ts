@@ -270,3 +270,16 @@ export interface SkillMastery {
     lastPracticedAt: string | null;
     prerequisitesMastered: boolean;
 }
+
+// ============ Offline Types ============
+
+export interface OfflineSkillPack {
+    skillId: string;
+    topic: Topic;
+    gradeLevel: GradeLevel;
+    questions: Question[];
+}
+
+export interface OfflinePack {
+    skills: OfflineSkillPack[];
+}

@@ -192,3 +192,28 @@ async def test_other_parent_cannot_access_world(client):
 
     res = await client.get(f"/api/world/{student_id}", headers=other_headers)
     assert res.status_code == 403
+
+
+async def test_offline_pack_covers_unlocked_river_and_boss_skills(client):
+    from app.core.config import settings
+    res = await client.post(
+        "/api/questions/seed?force=true",
+        headers={"X-Admin-Token": settings.ADMIN_SEED_TOKEN},
+    )
+    assert res.status_code == 200
+    headers, student_id = await register_parent_and_child(client, grade="P1")
+
+    res = await client.get(f"/api/world/{student_id}/offline-pack", headers=headers)
+    assert res.status_code == 200
+    packs = {p["skillId"]: p for p in res.json()["skills"]}
+    # A new P1 child has village-1, farm-1 and market-1 open; village-1 is a
+    # client-side game, so only the farm and market river skills are packed
+    assert set(packs) == {"kg2-count-to-20", "p1-add-within-20"}
+    pack = packs["p1-add-within-20"]
+    assert 0 < len(pack["questions"]) <= 20
+    assert all("correctAnswer" in q for q in pack["questions"])
+    assert pack["topic"] == "addition" and pack["gradeLevel"] == "P1"
+
+    other_headers, _ = await register_parent_and_child(client, email="other@example.com")
+    res = await client.get(f"/api/world/{student_id}/offline-pack", headers=other_headers)
+    assert res.status_code == 403

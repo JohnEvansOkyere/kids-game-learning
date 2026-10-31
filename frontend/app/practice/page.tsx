@@ -8,6 +8,7 @@ import Button from "@/components/ui/Button";
 import { practiceApi, getErrorMessage } from "@/lib/api";
 import NodeResult from "@/components/world/NodeResult";
 import { findNode, getNodeIdFromUrl, loadWorld } from "@/lib/world";
+import { cacheQuestions, pickCachedQuestions } from "@/lib/questionCache";
 import RiverGameCanvas, { RiverGameHandle } from "./RiverGameCanvas";
 import FunBreak from "./FunBreak";
 import { trackEvent } from "@/lib/events";
@@ -43,10 +44,6 @@ const topics: Array<{ id: Topic; label: string; icon: string; grades: string }> 
     { id: "subtraction", label: "Subtraction", icon: "➖", grades: "KG2-P3" },
     { id: "multiplication", label: "Multiplication", icon: "✖️", grades: "P2-P3" },
 ];
-
-function getCacheKey(topic: Topic, gradeLevel: string) {
-    return `practice_cache_${topic}_${gradeLevel}`;
-}
 
 type Step = "topic" | "game" | "results";
 
@@ -224,32 +221,6 @@ export default function PracticePage() {
         }
     };
 
-    const cacheQuestions = (newQuestions: Question[], selectedTopic: Topic, gradeLevel: string) => {
-        const cacheKey = getCacheKey(selectedTopic, gradeLevel);
-        const existing = localStorage.getItem(cacheKey);
-        const existingQuestions: Question[] = existing ? JSON.parse(existing).questions || [] : [];
-        const merged = [...newQuestions, ...existingQuestions].reduce<Question[]>((acc, q) => {
-            if (!acc.find((item) => item.id === q.id)) acc.push(q);
-            return acc;
-        }, []);
-
-        localStorage.setItem(
-            cacheKey,
-            JSON.stringify({
-                savedAt: Date.now(),
-                questions: merged.slice(0, 50),
-            })
-        );
-    };
-
-    const loadCachedQuestions = (selectedTopic: Topic, gradeLevel: string): Question[] => {
-        const cacheKey = getCacheKey(selectedTopic, gradeLevel);
-        const existing = localStorage.getItem(cacheKey);
-        if (!existing) return [];
-        const parsed = JSON.parse(existing);
-        return Array.isArray(parsed.questions) ? parsed.questions : [];
-    };
-
     const startPractice = async (selectedTopic: Topic, gradeOverride?: GradeLevel, skillId?: string) => {
         if (!student) return;
         const gradeLevel = gradeOverride ?? student.gradeLevel;
@@ -285,10 +256,10 @@ export default function PracticePage() {
             setEndedByLives(false);
             setFunBreak(false);
         } catch (err) {
-            const cached = loadCachedQuestions(selectedTopic, gradeLevel);
+            const cached = pickCachedQuestions(selectedTopic, gradeLevel, QUESTIONS_PER_SESSION);
             if (cached.length) {
                 setOffline(true);
-                setQuestions(cached.slice(0, QUESTIONS_PER_SESSION));
+                setQuestions(cached);
                 setSessionId(`offline-${Date.now()}`);
                 setStep("game");
                 setCurrentIndex(0);

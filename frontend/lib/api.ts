@@ -23,6 +23,7 @@ import type {
     WalletResponse,
     AnalyticsEvent,
     SkillMastery,
+    OfflinePack,
 } from "./types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -147,6 +148,11 @@ export const worldApi = {
 
     async equipItem(studentId: string, itemId: string): Promise<WalletResponse> {
         const response = await api.post<WalletResponse>(`/api/world/${studentId}/items/${itemId}/equip`);
+        return response.data;
+    },
+
+    async offlinePack(studentId: string): Promise<OfflinePack> {
+        const response = await api.get<OfflinePack>(`/api/world/${studentId}/offline-pack`);
         return response.data;
     },
 };

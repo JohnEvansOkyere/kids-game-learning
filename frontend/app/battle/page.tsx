@@ -15,6 +15,7 @@ import {
 } from "@/app/practice/GameAudio";
 import NodeResult from "@/components/world/NodeResult";
 import { findNode, getNodeIdFromUrl, loadWorld } from "@/lib/world";
+import { cacheQuestions, pickCachedQuestions } from "@/lib/questionCache";
 import type { GradeLevel, Question, Student, Topic, WorldNode } from "@/lib/types";
 
 const TOPICS: { id: Topic; label: string; icon: string }[] = [
@@ -499,15 +500,28 @@ export default function BattlePage() {
         if (!student || !topic) return;
         setLoading(true);
         setError("");
+        const gradeLevel = boss?.gradeLevel ?? student.gradeLevel;
         try {
-            const res = await practiceApi.start({
-                studentId: student.id,
-                topic,
-                gradeLevel: boss?.gradeLevel ?? student.gradeLevel,
-                skillId: boss?.skillId,
-            });
-            const qs = res.questions;
-            sessionIdRef.current = res.sessionId;
+            let qs: Question[];
+            let sessionId: string | null = null;
+            try {
+                const res = await practiceApi.start({
+                    studentId: student.id,
+                    topic,
+                    gradeLevel,
+                    skillId: boss?.skillId,
+                });
+                qs = res.questions;
+                sessionId = res.sessionId;
+                cacheQuestions(qs, topic, gradeLevel);
+            } catch (err: any) {
+                // No connection: battle with questions saved on the phone; the map
+                // sends the boss result later, but these answers aren't recorded
+                if (err?.response) throw err;
+                qs = pickCachedQuestions(topic, gradeLevel, 20);
+                if (qs.length < 6) throw err;
+            }
+            sessionIdRef.current = sessionId;
             recordedRef.current = new Set();
             questionShownAtRef.current = Date.now();
             if (qs.length < 6) {

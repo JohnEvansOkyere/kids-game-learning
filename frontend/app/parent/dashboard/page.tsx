@@ -7,6 +7,7 @@ import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Avatar from "@/components/ui/Avatar";
 import SkillMap from "@/components/parent/SkillMap";
+import InstallPrompt from "@/components/pwa/InstallPrompt";
 import { practiceApi, skillsApi } from "@/lib/api";
 import type { GameSession, Parent, SkillMastery, Student } from "@/lib/types";
 
@@ -167,6 +168,8 @@ export default function ParentDashboardPage() {
                             Here&apos;s how your children are doing in MathChampions Ghana.
                         </p>
                     </div>
+
+                    <InstallPrompt />
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-8">
                         <Card colorful className="text-center p-4">

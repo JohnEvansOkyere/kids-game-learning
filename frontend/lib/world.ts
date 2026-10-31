@@ -2,9 +2,12 @@
  * Adventure World helpers shared by the map and the game pages
  */
 import { worldApi } from "./api";
+import { cacheQuestions } from "./questionCache";
 import type { GradeLevel, NodeCompleteRequest, World, WorldNode } from "./types";
 
 const PENDING_KEY = "pendingNodeCompletions";
+// Refresh the offline question pack at most this often
+const OFFLINE_PACK_MAX_AGE_MS = 6 * 60 * 60 * 1000;
 
 type PendingNodeCompletion = {
     studentId: string;
@@ -72,6 +75,29 @@ export async function loadWorld(studentId: string): Promise<World> {
         const cached = localStorage.getItem(cacheKey(studentId));
         if (cached) return JSON.parse(cached) as World;
         throw err;
+    }
+}
+
+function offlinePackKey(studentId: string) {
+    return `offlinePackAt_${studentId}`;
+}
+
+/**
+ * Store questions for the child's unlocked stages so they can play without data.
+ * Pass force after a stage unlock so the new stage's questions are fetched too.
+ */
+export async function refreshOfflinePack(studentId: string, force = false) {
+    if (typeof navigator !== "undefined" && !navigator.onLine) return;
+    const last = Number(localStorage.getItem(offlinePackKey(studentId)) || 0);
+    if (!force && Date.now() - last < OFFLINE_PACK_MAX_AGE_MS) return;
+    try {
+        const pack = await worldApi.offlinePack(studentId);
+        for (const skill of pack.skills) {
+            cacheQuestions(skill.questions, skill.topic, skill.gradeLevel);
+        }
+        localStorage.setItem(offlinePackKey(studentId), String(Date.now()));
+    } catch {
+        // try again next time the map opens
     }
 }
 

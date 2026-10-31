@@ -10,10 +10,11 @@ import logging
 from app.schemas_world import (
     ItemResponse, NodeResponse, ZoneResponse, WorldResponse,
     NodeCompleteRequest, NodeCompleteResponse,
-    ChestResponse, WalletResponse,
+    ChestResponse, WalletResponse, OfflinePackResponse, OfflineSkillPack,
 )
+from app.skills_content import SKILLS_BY_ID
 from app.world_content import (
-    ZONES, ITEMS, NODES_BY_ID, ITEMS_BY_ID, ZONES_BY_ID, BOSS_ONLY_ITEMS,
+    NODES, ZONES, ITEMS, NODES_BY_ID, ITEMS_BY_ID, ZONES_BY_ID, BOSS_ONLY_ITEMS,
     COINS_PER_STAR, FIRST_CLEAR_BONUS,
     CHEST_MIN_COINS, CHEST_MAX_COINS, CHEST_ITEM_CHANCE,
     nodes_in_zone, stars_for, compute_unlocked,
@@ -24,6 +25,9 @@ from prisma import Prisma
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+# Questions per skill the device keeps for playing without data
+OFFLINE_QUESTIONS_PER_SKILL = 20
 
 
 async def get_owned_student(student_id: str, user, db: Prisma):
@@ -114,6 +118,39 @@ async def get_world(
         zones=zones,
         items=[item_response(i["id"], owned_ids) for i in ITEMS],
     )
+
+
+@router.get("/{student_id}/offline-pack", response_model=OfflinePackResponse)
+async def get_offline_pack(
+    student_id: str,
+    user = Depends(get_current_user),
+    db: Prisma = Depends(get_db)
+):
+    """
+    Questions (with answers) for every skill on the student's unlocked nodes
+
+    The app stores these so river and boss stages still work without data.
+    Answers are included on purpose: the device checks them while offline.
+    """
+    student = await get_owned_student(student_id, user, db)
+    progress, _ = await load_progress(student_id, db)
+    unlocked = compute_unlocked(student.gradeLevel, {nid: p.stars for nid, p in progress.items()})
+
+    skill_ids = sorted({n["skillId"] for n in NODES if n["id"] in unlocked and n["type"] in ("river", "boss")})
+    packs = []
+    for skill_id in skill_ids:
+        questions = await db.question.find_many(where={"skillId": skill_id})
+        if not questions:
+            continue
+        skill = SKILLS_BY_ID[skill_id]
+        packs.append(OfflineSkillPack(
+            skillId=skill_id,
+            topic=skill["topic"],
+            gradeLevel=skill["gradeLevel"],
+            questions=random.sample(questions, min(OFFLINE_QUESTIONS_PER_SKILL, len(questions))),
+        ))
+
+    return OfflinePackResponse(skills=packs)
 
 
 @router.post("/{student_id}/nodes/{node_id}/complete", response_model=NodeCompleteResponse)

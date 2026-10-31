@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Header from "@/components/layout/Header";
 import Card from "@/components/ui/Card";
 import Avatar from "@/components/ui/Avatar";
+import InstallPrompt from "@/components/pwa/InstallPrompt";
 import { studentsApi } from "@/lib/api";
 import type { Student } from "@/lib/types";
 
@@ -60,6 +61,8 @@ export default function StudentSelectPage() {
                             Select your child to start the math adventure!
                         </p>
                     </div>
+
+                    <InstallPrompt />
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                         {students.map((student) => (

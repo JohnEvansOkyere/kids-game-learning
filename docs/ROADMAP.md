@@ -90,7 +90,11 @@ Polish (can run in parallel)
 
 ## Infrastructure (ongoing)
 
-- [ ] Offline-first PWA: download a week of nodes, sync answers later
+- [x] Installable PWA: manifest + icons, service worker saves every game page, "Add to home screen" card for parents
+- [x] Offline play: map, river stages and boss battles work with no data (questions for unlocked stages are kept on the phone); results and events sync when back online
+- [ ] Answers given offline are not saved, so they don't count towards mastery yet (stage results do sync)
+- [ ] Download a week of content ahead (more questions per skill, upcoming stages)
+- [ ] Replace the placeholder flag icon once the Ghanaian art style is commissioned
 - [x] Analytics events for retention metrics (queued offline on the device, deduplicated on the server)
 - [x] Stop committing `frontend/.next/` build output to git
 - [x] Fix SSR crash on `/practice`: `RiverGameCanvas` imports Phaser at module level (`window is not defined` → HTTP 500, then the client recovers)
