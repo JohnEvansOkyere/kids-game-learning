@@ -44,6 +44,10 @@ Validation (before anything else)
 Polish (can run in parallel)
 - [ ] Commission one consistent Ghanaian art style (characters + zone backgrounds)
 - [x] Sound and juice pass: unlock animation, chest opening, coin burst
+- [x] Visual design pass: design tokens, 3D buttons, Fredoka/Nunito, painted zone scenes with a winding road, HUD + bottom dock, "next goal" card, dress-up shop, sequenced reward reveal, calm parent screens (see `docs/frontend-ui.md`)
+- [ ] Restyle Tug of War, Counting Catch and Number Pop screens to match (they inherit the new buttons/cards but keep their own layouts)
+- [ ] Daily streak that forgives a missed day (needs a backend field; do not add a guilt-based streak)
+- [ ] Haptic tick on tap (`navigator.vibrate`) and a PIN gate on the parent area
 - [x] "Fun break" after every 5 problems in river stages (tap-the-fish, ~10 s, timer paused)
 - [ ] Fun breaks for the other long node types if playtests show they drag
 - [ ] More node types where math *is* the mechanic (market change-giving, grouping on the farm)

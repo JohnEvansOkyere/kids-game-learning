@@ -261,3 +261,6 @@ node_modules/
 
 # The Python "lib/" rule above must not hide the frontend source folder
 !frontend/lib/
+
+# Browser-automation screenshots and logs
+.playwright-mcp/
