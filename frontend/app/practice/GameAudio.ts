@@ -57,6 +57,33 @@ export function playVictorySFX() {
     playNote(1047, 0.15, 0.06, "triangle", 0.36);
 }
 
+export function playCoinSFX() {
+    playNote(988, 0.08, 0.06, "square", 0);
+    playNote(1319, 0.25, 0.06, "square", 0.08);
+}
+
+export function playUnlockSFX() {
+    playNote(660, 0.1, 0.08, "triangle", 0);
+    playNote(880, 0.1, 0.08, "triangle", 0.09);
+    playNote(1320, 0.35, 0.1, "triangle", 0.18);
+}
+
+export function playChestShakeSFX() {
+    playNote(180, 0.07, 0.08, "square", 0);
+    playNote(160, 0.07, 0.08, "square", 0.18);
+    playNote(180, 0.07, 0.08, "square", 0.36);
+}
+
+export function playChestOpenSFX() {
+    [523, 659, 784, 1047, 1319].forEach((freq, i) => playNote(freq, 0.18, 0.08, "triangle", i * 0.07));
+    playNote(1568, 0.5, 0.05, "sine", 0.35);
+}
+
+/** Rising "pop" - pass how many have been popped so each one sounds higher */
+export function playPopSFX(step = 0) {
+    playNote(440 * Math.pow(2, step / 6), 0.1, 0.08, "sine", 0);
+}
+
 export function playSplashSFX() {
     try {
         const c = getCtx();

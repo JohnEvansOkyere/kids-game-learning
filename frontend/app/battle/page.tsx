@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Header from "@/components/layout/Header";
 import Card from "@/components/ui/Card";
@@ -13,7 +13,9 @@ import {
     startBackgroundMusic,
     stopBackgroundMusic,
 } from "@/app/practice/GameAudio";
-import type { Question, Student, Topic } from "@/lib/types";
+import NodeResult from "@/components/world/NodeResult";
+import { findNode, getNodeIdFromUrl, loadWorld } from "@/lib/world";
+import type { GradeLevel, Question, Student, Topic, WorldNode } from "@/lib/types";
 
 const TOPICS: { id: Topic; label: string; icon: string }[] = [
     { id: "counting", label: "Counting", icon: "🔢" },
@@ -22,6 +24,14 @@ const TOPICS: { id: Topic; label: string; icon: string }[] = [
     { id: "multiplication", label: "Multiplication", icon: "✖️" },
 ];
 const WIN_LEAD = 5;
+// Boss mode: how often the computer pulls the rope, by grade (ms, before jitter)
+const BOSS_PULL_MS: Record<GradeLevel, number> = {
+    KG1: 9000,
+    KG2: 8500,
+    P1: 8000,
+    P2: 7500,
+    P3: 7000,
+};
 type Step = "setup" | "play" | "result";
 
 function formatTime(s: number) {
@@ -298,7 +308,9 @@ function TeamPanel({
     onDigit,
     onClear,
     onSubmit,
+    label,
 }: {
+    label?: string;
     team: 1 | 2;
     score: number;
     question: Question | undefined;
@@ -332,8 +344,8 @@ function TeamPanel({
             <div
                 className={`${headerBg} px-3 py-2 sm:px-4 sm:py-3 flex items-center justify-between flex-shrink-0`}
             >
-                <span className="text-white font-bold text-lg sm:text-xl md:text-2xl">
-                    Team {team}
+                <span className="text-white font-bold text-lg sm:text-xl md:text-2xl truncate">
+                    {label ?? `Team ${team}`}
                 </span>
                 <span className="bg-white/20 backdrop-blur text-white font-bold rounded-full w-9 h-9 sm:w-10 sm:h-10 md:w-12 md:h-12 flex items-center justify-center text-lg sm:text-xl md:text-2xl">
                     {score}
@@ -369,6 +381,25 @@ function TeamPanel({
     );
 }
 
+/* Computer opponent shown in place of Team 2 in boss mode */
+function BossPanel({ boss, score, gameOver }: { boss: WorldNode; score: number; gameOver: boolean }) {
+    return (
+        <div className="rounded-2xl border-2 border-red-500/60 overflow-hidden bg-gray-900/80 min-w-0 flex flex-col h-full">
+            <div className="bg-red-700 px-3 py-2 sm:px-4 sm:py-3 flex items-center justify-between flex-shrink-0">
+                <span className="text-white font-bold text-lg sm:text-xl md:text-2xl truncate">BOSS</span>
+                <span className="bg-white/20 backdrop-blur text-white font-bold rounded-full w-9 h-9 sm:w-10 sm:h-10 md:w-12 md:h-12 flex items-center justify-center text-lg sm:text-xl md:text-2xl">
+                    {score}
+                </span>
+            </div>
+            <div className="flex-1 flex flex-col items-center justify-center p-4 text-center">
+                <span className={`text-6xl sm:text-7xl md:text-8xl ${gameOver ? "" : "animate-bounce"}`}>{boss.emoji}</span>
+                <p className="text-red-300 font-bold text-lg sm:text-xl md:text-2xl mt-3">{boss.title}</p>
+                {!gameOver && <p className="text-gray-400 mt-2 animate-pulse">is pulling the rope...</p>}
+            </div>
+        </div>
+    );
+}
+
 /* ═══════════════════════════════════════
    Main Battle Page
    ═══════════════════════════════════════ */
@@ -395,6 +426,14 @@ export default function BattlePage() {
     const [winner, setWinner] = useState<1 | 2 | null>(null);
     const [winBanner, setWinBanner] = useState<string | null>(null);
     const [timer, setTimer] = useState(0);
+    // Boss mode: launched from the Adventure World map (?node=...)
+    const [nodeId, setNodeId] = useState<string | null>(null);
+    const [boss, setBoss] = useState<WorldNode | null>(null);
+    const [attemptsP1, setAttemptsP1] = useState(0);
+    // Boss mode records the child's first try at each question, for skill mastery
+    const sessionIdRef = useRef<string | null>(null);
+    const recordedRef = useRef<Set<string>>(new Set());
+    const questionShownAtRef = useRef(Date.now());
 
     /* Load student */
     useEffect(() => {
@@ -409,6 +448,33 @@ export default function BattlePage() {
             router.push("/student/select");
         }
     }, [router]);
+
+    /* Boss mode: load the node from the map */
+    useEffect(() => {
+        if (!student) return;
+        const id = getNodeIdFromUrl();
+        if (!id) return;
+        setNodeId(id);
+        loadWorld(student.id)
+            .then((world) => {
+                const found = findNode(world, id);
+                if (!found || found.type !== "boss" || !found.unlocked) {
+                    router.push("/play");
+                    return;
+                }
+                setBoss(found);
+                setTopic(found.topic);
+            })
+            .catch((err) => setError(getErrorMessage(err)));
+    }, [student, router]);
+
+    /* Boss mode: the computer pulls the rope every few seconds */
+    useEffect(() => {
+        if (!boss || step !== "play" || gameOver) return;
+        const delay = BOSS_PULL_MS[boss.gradeLevel] * (0.8 + Math.random() * 0.4);
+        const id = setTimeout(() => setScoreP2((s) => s + 1), delay);
+        return () => clearTimeout(id);
+    }, [boss, step, gameOver, scoreP2]);
 
     /* Elapsed timer */
     useEffect(() => {
@@ -437,15 +503,26 @@ export default function BattlePage() {
             const res = await practiceApi.start({
                 studentId: student.id,
                 topic,
-                gradeLevel: student.gradeLevel,
+                gradeLevel: boss?.gradeLevel ?? student.gradeLevel,
+                skillId: boss?.skillId,
             });
             const qs = res.questions;
+            sessionIdRef.current = res.sessionId;
+            recordedRef.current = new Set();
+            questionShownAtRef.current = Date.now();
             if (qs.length < 6) {
                 setError("Not enough questions. Try another topic.");
                 return;
             }
-            setQuestionsP1(qs.filter((_, i) => i % 2 === 0));
-            setQuestionsP2(qs.filter((_, i) => i % 2 === 1));
+            if (boss) {
+                // Only the child answers questions; the boss is the computer
+                setQuestionsP1(qs);
+                setQuestionsP2([]);
+            } else {
+                setQuestionsP1(qs.filter((_, i) => i % 2 === 0));
+                setQuestionsP2(qs.filter((_, i) => i % 2 === 1));
+            }
+            setAttemptsP1(0);
             setIndexP1(0);
             setIndexP2(0);
             setScoreP1(0);
@@ -464,7 +541,7 @@ export default function BattlePage() {
         } finally {
             setLoading(false);
         }
-    }, [student, topic]);
+    }, [student, topic, boss]);
 
     /* Digit press */
     const handleDigit = useCallback(
@@ -514,6 +591,17 @@ export default function BattlePage() {
             const setAnswer = player === 1 ? setAnswerP1 : setAnswerP2;
             const setScore = player === 1 ? setScoreP1 : setScoreP2;
             const setIndex = player === 1 ? setIndexP1 : setIndexP2;
+            if (player === 1) setAttemptsP1((a) => a + 1);
+
+            const sessionId = sessionIdRef.current;
+            if (boss && player === 1 && sessionId && !recordedRef.current.has(q.id)) {
+                recordedRef.current.add(q.id);
+                const timeSpent = Math.max(1, Math.round((Date.now() - questionShownAtRef.current) / 1000));
+                // Fire and forget: the tug of war never waits on the network
+                practiceApi
+                    .submitAnswer({ sessionId, questionId: q.id, answer: value, timeSpent })
+                    .catch(() => {});
+            }
 
             if (value === q.correctAnswer) {
                 try { playCorrectSFX(); } catch {}
@@ -523,6 +611,7 @@ export default function BattlePage() {
                     setFlash(null);
                     setAnswer("");
                     setIndex((prev) => prev + 1);
+                    if (player === 1) questionShownAtRef.current = Date.now();
                 }, 400);
             } else {
                 try { playWrongSFX(); } catch {}
@@ -535,6 +624,7 @@ export default function BattlePage() {
         },
         [
             gameOver,
+            boss,
             answerP1,
             answerP2,
             questionsP1,
@@ -553,20 +643,64 @@ export default function BattlePage() {
         if (Math.abs(diff) >= WIN_LEAD) {
             setGameOver(true);
             const w: 1 | 2 = diff > 0 ? 1 : 2;
-            setWinBanner(w === 1 ? "Team 1 pulled them over!" : "Team 2 pulled them over!");
+            if (boss) {
+                setWinBanner(w === 1 ? `${student?.name} beat ${boss.title}!` : `${boss.title} pulled you over!`);
+            } else {
+                setWinBanner(w === 1 ? "Team 1 pulled them over!" : "Team 2 pulled them over!");
+            }
             try { playVictorySFX(); } catch {}
             setTimeout(() => {
                 setWinner(w);
                 setStep("result");
             }, 2000);
         }
-    }, [scoreP1, scoreP2, step, gameOver]);
+    }, [scoreP1, scoreP2, step, gameOver, boss, student]);
 
     /* ─── Loading guard ─── */
     if (!student) {
         return (
             <div className="min-h-screen bg-gray-950 flex items-center justify-center">
                 <p className="text-2xl text-gray-400">Loading...</p>
+            </div>
+        );
+    }
+
+    /* ═══════════════════════════
+       BOSS INTRO (map node)
+       ═══════════════════════════ */
+    if (step === "setup" && nodeId) {
+        return (
+            <div className="min-h-screen bg-background">
+                <Header />
+                <div className="container mx-auto px-4 py-8 max-w-2xl text-center">
+                    {error && (
+                        <div className="bg-danger/10 border-4 border-danger rounded-2xl p-4 mb-6">
+                            <p className="text-danger font-bold">{error}</p>
+                        </div>
+                    )}
+                    {boss ? (
+                        <Card colorful className="p-8 mb-6">
+                            <p className="text-8xl mb-4 animate-bounce">{boss.emoji}</p>
+                            <h1 className="text-4xl font-bold text-primary mb-2">{boss.title}</h1>
+                            <p className="text-xl text-gray-700 mb-2">
+                                Answer quickly to pull the rope, {student.name}!
+                            </p>
+                            <p className="text-lg text-gray-600">
+                                Get {WIN_LEAD} pulls ahead before {boss.title} does to win.
+                            </p>
+                        </Card>
+                    ) : (
+                        !error && <p className="text-2xl text-gray-600 py-12">Getting ready...</p>
+                    )}
+                    <div className="flex gap-4 justify-center">
+                        <Button variant="secondary" onClick={() => router.push("/play")}>
+                            🗺️ Map
+                        </Button>
+                        <Button variant="primary" onClick={startBattle} disabled={!boss || loading}>
+                            {loading ? "Loading..." : "⚔️ Start Battle"}
+                        </Button>
+                    </div>
+                </div>
             </div>
         );
     }
@@ -651,9 +785,15 @@ export default function BattlePage() {
                 <Header />
                 <div className="container mx-auto px-4 py-8 max-w-3xl text-center">
                     <h2 className="text-4xl font-bold text-white mb-2">
-                        {winner === 1 && "Team 1 Wins! 🎉"}
-                        {winner === 2 && "Team 2 Wins! 🎉"}
-                        {winner === null && "It's a Tie! 🤝"}
+                        {boss ? (
+                            winner === 1 ? `You beat ${boss.title}! 🎉` : `${boss.title} wins this time!`
+                        ) : (
+                            <>
+                                {winner === 1 && "Team 1 Wins! 🎉"}
+                                {winner === 2 && "Team 2 Wins! 🎉"}
+                                {winner === null && "It's a Tie! 🤝"}
+                            </>
+                        )}
                     </h2>
                     <p className="text-2xl text-gray-300 mb-2">
                         {scoreP1} – {scoreP2}
@@ -669,6 +809,18 @@ export default function BattlePage() {
                         />
                     </div>
 
+                    {boss ? (
+                        <div className="bg-background rounded-3xl p-6">
+                            <NodeResult
+                                studentId={student.id}
+                                nodeId={boss.id}
+                                correct={scoreP1}
+                                total={attemptsP1}
+                                won={winner === 1}
+                                onPlayAgain={startBattle}
+                            />
+                        </div>
+                    ) : (
                     <div className="flex gap-4 justify-center">
                         <Button
                             variant="primary"
@@ -686,6 +838,7 @@ export default function BattlePage() {
                             Dashboard
                         </Button>
                     </div>
+                    )}
                 </div>
             </div>
         );
@@ -700,7 +853,9 @@ export default function BattlePage() {
             <div className="flex items-center justify-between px-4 sm:px-6 lg:px-8 py-2 sm:py-3 flex-shrink-0">
                 <button
                     onClick={() => {
-                        if (confirm("Leave battle?")) setStep("setup");
+                        if (!confirm("Leave battle?")) return;
+                        if (boss) router.push("/play");
+                        else setStep("setup");
                     }}
                     className="text-gray-400 hover:text-white font-bold text-sm sm:text-base"
                 >
@@ -727,6 +882,7 @@ export default function BattlePage() {
                     {/* ── Team 1 panel ── */}
                     <TeamPanel
                         team={1}
+                        label={boss ? student.name : undefined}
                         score={scoreP1}
                         question={questionsP1.length ? questionsP1[indexP1 % questionsP1.length] : undefined}
                         answer={answerP1}
@@ -742,7 +898,7 @@ export default function BattlePage() {
                         {/* Scoreboard */}
                         <div className="flex items-center gap-3 sm:gap-4 mb-1 sm:mb-2 flex-shrink-0">
                             <span className="text-blue-400 font-bold text-sm sm:text-base md:text-lg">
-                                Team 1
+                                {boss ? student.name : "Team 1"}
                             </span>
                             <div className="flex items-center gap-2 sm:gap-3">
                                 <span className="text-white text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold">
@@ -754,7 +910,7 @@ export default function BattlePage() {
                                 </span>
                             </div>
                             <span className="text-red-400 font-bold text-sm sm:text-base md:text-lg">
-                                Team 2
+                                {boss ? "Boss" : "Team 2"}
                             </span>
                         </div>
 
@@ -767,7 +923,10 @@ export default function BattlePage() {
                         </div>
                     </div>
 
-                    {/* ── Team 2 panel ── */}
+                    {/* ── Team 2 panel (or the computer boss) ── */}
+                    {boss ? (
+                        <BossPanel boss={boss} score={scoreP2} gameOver={gameOver} />
+                    ) : (
                     <TeamPanel
                         team={2}
                         score={scoreP2}
@@ -779,6 +938,7 @@ export default function BattlePage() {
                         onClear={() => handleClear(2)}
                         onSubmit={() => handleSubmit(2)}
                     />
+                    )}
                 </div>
             </div>
         </div>

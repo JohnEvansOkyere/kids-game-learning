@@ -4,17 +4,22 @@ import React, { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Header from "@/components/layout/Header";
 import Button from "@/components/ui/Button";
+import NodeResult from "@/components/world/NodeResult";
+import { getNodeIdFromUrl } from "@/lib/world";
 
 const MAX_NUMBER = 10;
 
 export default function NumberPopPage() {
     const router = useRouter();
-    const [student, setStudent] = useState<{ name: string } | null>(null);
+    const [student, setStudent] = useState<{ id: string; name: string } | null>(null);
     const [nextToPop, setNextToPop] = useState(1);
     const [wrongTapped, setWrongTapped] = useState<number | null>(null);
     const [gameOver, setGameOver] = useState(false);
     const [started, setStarted] = useState(false);
     const [gameKey, setGameKey] = useState(0);
+    const [mistakes, setMistakes] = useState(0);
+    // Set when launched from the Adventure World map (?node=...)
+    const [nodeId, setNodeId] = useState<string | null>(null);
 
     useEffect(() => {
         const raw = localStorage.getItem("selectedStudent");
@@ -22,6 +27,7 @@ export default function NumberPopPage() {
             router.push("/student/select");
             return;
         }
+        setNodeId(getNodeIdFromUrl());
         try {
             const s = JSON.parse(raw);
             setStudent(s);
@@ -49,6 +55,7 @@ export default function NumberPopPage() {
                 setWrongTapped(null);
             } else {
                 setWrongTapped(n);
+                setMistakes((m) => m + 1);
                 setTimeout(() => setWrongTapped(null), 600);
             }
         },
@@ -58,6 +65,7 @@ export default function NumberPopPage() {
     const startGame = useCallback(() => {
         setNextToPop(1);
         setWrongTapped(null);
+        setMistakes(0);
         setGameOver(false);
         setStarted(true);
         setGameKey((k) => k + 1);
@@ -79,7 +87,7 @@ export default function NumberPopPage() {
                 <div className="max-w-2xl mx-auto">
                     <div className="flex items-center justify-between mb-4">
                         <button
-                            onClick={() => router.push("/dashboard")}
+                            onClick={() => router.push(nodeId ? "/play" : "/dashboard")}
                             className="text-primary font-bold hover:underline"
                         >
                             ← Back
@@ -112,6 +120,16 @@ export default function NumberPopPage() {
                             <p className="text-2xl text-gray-700 mb-6">
                                 You popped 1 to {MAX_NUMBER} in order!
                             </p>
+                            {nodeId ? (
+                                <NodeResult
+                                    key={gameKey}
+                                    studentId={student.id}
+                                    nodeId={nodeId}
+                                    correct={MAX_NUMBER}
+                                    total={MAX_NUMBER + mistakes}
+                                    onPlayAgain={startGame}
+                                />
+                            ) : (
                             <div className="flex gap-4 justify-center">
                                 <Button variant="primary" onClick={startGame}>
                                     Play Again
@@ -123,6 +141,7 @@ export default function NumberPopPage() {
                                     Dashboard
                                 </Button>
                             </div>
+                            )}
                         </div>
                     ) : (
                         <>

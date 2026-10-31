@@ -38,8 +38,8 @@ export default function StudentSelectPage() {
     const handleSelectStudent = (student: Student) => {
         // Store selected student
         localStorage.setItem("selectedStudent", JSON.stringify(student));
-        // Redirect to dashboard
-        router.push("/dashboard");
+        // Straight into the Adventure World map
+        router.push("/play");
     };
 
     const handleAddChild = () => {

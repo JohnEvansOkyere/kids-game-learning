@@ -4,6 +4,8 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Header from "@/components/layout/Header";
 import Button from "@/components/ui/Button";
+import NodeResult from "@/components/world/NodeResult";
+import { getNodeIdFromUrl } from "@/lib/world";
 
 const GOAL = 10;
 const STAR_SPAWN_INTERVAL_MS = 1200;
@@ -18,12 +20,18 @@ interface FallingStar {
 
 export default function CountingCatchPage() {
     const router = useRouter();
-    const [student, setStudent] = useState<{ name: string } | null>(null);
+    const [student, setStudent] = useState<{ id: string; name: string } | null>(null);
     const [count, setCount] = useState(0);
     const [stars, setStars] = useState<FallingStar[]>([]);
     const [gameOver, setGameOver] = useState(false);
     const [started, setStarted] = useState(false);
+    const [missed, setMissed] = useState(0);
+    const [round, setRound] = useState(0);
+    // Set when launched from the Adventure World map (?node=...)
+    const [nodeId, setNodeId] = useState<string | null>(null);
     const idRef = useRef(0);
+    const caughtRef = useRef<Set<number>>(new Set());
+    const gameOverRef = useRef(false);
     const spawnRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     useEffect(() => {
@@ -32,6 +40,7 @@ export default function CountingCatchPage() {
             router.push("/student/select");
             return;
         }
+        setNodeId(getNodeIdFromUrl());
         try {
             const s = JSON.parse(raw);
             setStudent(s);
@@ -54,6 +63,10 @@ export default function CountingCatchPage() {
         ]);
         // Remove after fall animation so we don't pile up
         setTimeout(() => {
+            // A star that reached the ground uncaught counts as a miss
+            if (!caughtRef.current.has(id) && !gameOverRef.current) {
+                setMissed((m) => m + 1);
+            }
             setStars((prev) => prev.filter((s) => s.id !== id || s.caught));
         }, FALL_DURATION_MS + 500);
     }, []);
@@ -61,13 +74,18 @@ export default function CountingCatchPage() {
     const startGame = useCallback(() => {
         setCount(0);
         setStars([]);
+        setMissed(0);
+        caughtRef.current = new Set();
+        gameOverRef.current = false;
         setGameOver(false);
         setStarted(true);
+        setRound((r) => r + 1);
         spawnStar();
         spawnRef.current = setInterval(spawnStar, STAR_SPAWN_INTERVAL_MS);
     }, [spawnStar]);
 
     const catchStar = useCallback((id: number) => {
+        caughtRef.current.add(id);
         setStars((prev) =>
             prev.map((s) => (s.id === id ? { ...s, caught: true } : s))
         );
@@ -76,6 +94,7 @@ export default function CountingCatchPage() {
             if (next >= GOAL) {
                 if (spawnRef.current) clearInterval(spawnRef.current);
                 spawnRef.current = null;
+                gameOverRef.current = true;
                 setGameOver(true);
             }
             return next;
@@ -104,7 +123,7 @@ export default function CountingCatchPage() {
                 <div className="max-w-2xl mx-auto">
                     <div className="flex items-center justify-between mb-4">
                         <button
-                            onClick={() => router.push("/dashboard")}
+                            onClick={() => router.push(nodeId ? "/play" : "/dashboard")}
                             className="text-primary font-bold hover:underline"
                         >
                             ← Back
@@ -134,6 +153,16 @@ export default function CountingCatchPage() {
                             <p className="text-2xl text-gray-700 mb-6">
                                 You caught {GOAL} stars!
                             </p>
+                            {nodeId ? (
+                                <NodeResult
+                                    key={round}
+                                    studentId={student.id}
+                                    nodeId={nodeId}
+                                    correct={GOAL}
+                                    total={GOAL + missed}
+                                    onPlayAgain={startGame}
+                                />
+                            ) : (
                             <div className="flex gap-4 justify-center">
                                 <Button variant="primary" onClick={startGame}>
                                     Play Again
@@ -145,6 +174,7 @@ export default function CountingCatchPage() {
                                     Dashboard
                                 </Button>
                             </div>
+                            )}
                         </div>
                     ) : (
                         <div

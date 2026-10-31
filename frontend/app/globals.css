@@ -119,4 +119,98 @@
   .animate-star-fall {
     animation: star-fall linear forwards;
   }
+
+  /* Adventure World juice: transform/opacity only so cheap phones stay smooth */
+  @keyframes coin-burst {
+    from {
+      transform: translate(0, 0) scale(0.5);
+      opacity: 1;
+    }
+    to {
+      transform: translate(var(--dx), var(--dy)) scale(1);
+      opacity: 0;
+    }
+  }
+
+  @keyframes pop {
+    0%, 100% {
+      transform: scale(1);
+    }
+    40% {
+      transform: scale(1.25);
+    }
+  }
+
+  @keyframes unlock {
+    0% {
+      transform: scale(0.6) rotate(0deg);
+    }
+    40% {
+      transform: scale(1.25) rotate(-12deg);
+    }
+    70% {
+      transform: scale(0.95) rotate(8deg);
+    }
+    100% {
+      transform: scale(1) rotate(0deg);
+    }
+  }
+
+  @keyframes chest-shake {
+    0%, 100% {
+      transform: rotate(0deg);
+    }
+    20%, 60% {
+      transform: rotate(-10deg) scale(1.05);
+    }
+    40%, 80% {
+      transform: rotate(10deg) scale(1.05);
+    }
+  }
+
+  @keyframes fade-up {
+    from {
+      transform: translateY(0);
+      opacity: 1;
+    }
+    to {
+      transform: translateY(-30px);
+      opacity: 0;
+    }
+  }
+
+  .animate-coin-burst {
+    animation: coin-burst 0.8s ease-out forwards;
+  }
+
+  .animate-pop {
+    animation: pop 0.4s ease-out;
+  }
+
+  .animate-unlock {
+    animation: unlock 0.8s ease-out 0.3s both;
+  }
+
+  .animate-chest-shake {
+    animation: chest-shake 0.6s ease-in-out infinite;
+  }
+
+  .animate-fade-up {
+    animation: fade-up 1s ease-out 0.6s both;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-coin-burst,
+    .animate-pop,
+    .animate-unlock,
+    .animate-chest-shake,
+    .animate-fade-up {
+      animation: none;
+    }
+
+    .animate-coin-burst,
+    .animate-fade-up {
+      opacity: 0;
+    }
+  }
 }

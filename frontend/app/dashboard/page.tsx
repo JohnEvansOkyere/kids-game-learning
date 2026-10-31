@@ -43,6 +43,20 @@ export default function DashboardPage() {
                         </p>
                     </div>
 
+                    <Card
+                        colorful
+                        className="text-center p-8 mb-6 hover:scale-105 transition-transform cursor-pointer border-ghana-gold"
+                        onClick={() => router.push("/play")}
+                    >
+                        <div className="text-6xl mb-4">🗺️</div>
+                        <h3 className="text-3xl font-bold text-primary mb-2">
+                            Adventure Map
+                        </h3>
+                        <p className="text-gray-600">
+                            Travel across Ghana, beat the bosses and collect treasures!
+                        </p>
+                    </Card>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <Card
                             colorful

@@ -6,7 +6,11 @@ import Header from "@/components/layout/Header";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { practiceApi, getErrorMessage } from "@/lib/api";
+import NodeResult from "@/components/world/NodeResult";
+import { findNode, getNodeIdFromUrl, loadWorld } from "@/lib/world";
 import RiverGameCanvas, { RiverGameHandle } from "./RiverGameCanvas";
+import FunBreak from "./FunBreak";
+import { trackEvent } from "@/lib/events";
 import {
     playCorrectSFX,
     playWrongSFX,
@@ -23,11 +27,15 @@ import type {
     Student,
     Topic,
     AvatarType,
+    GradeLevel,
+    WorldNode,
 } from "@/lib/types";
 
 const QUESTION_TIME_SECONDS = 30;
 const QUESTIONS_PER_SESSION = 10;
 const MAX_LIVES = 3;
+// A short no-maths tapping break after this many questions
+const FUN_BREAK_EVERY = 5;
 
 const topics: Array<{ id: Topic; label: string; icon: string; grades: string }> = [
     { id: "counting", label: "Counting", icon: "🔢", grades: "KG1-KG2" },
@@ -92,6 +100,10 @@ export default function PracticePage() {
     const [offline, setOffline] = useState(false);
     const [results, setResults] = useState<PracticeCompleteResponse | null>(null);
     const [endedByLives, setEndedByLives] = useState(false);
+    const [funBreak, setFunBreak] = useState(false);
+    // Set when launched from the Adventure World map (?node=...)
+    const [nodeId, setNodeId] = useState<string | null>(null);
+    const [node, setNode] = useState<WorldNode | null>(null);
 
     const riverGameRef = useRef<RiverGameHandle | null>(null);
     const questionStartTimeRef = useRef<number>(Date.now());
@@ -146,6 +158,8 @@ export default function PracticePage() {
     useEffect(() => {
         if (step !== "game") return;
         if (!currentQuestion) return;
+        // The clock starts when the break ends
+        if (funBreak) return;
 
         setTimeLeft(QUESTION_TIME_SECONDS);
         questionStartTimeRef.current = Date.now();
@@ -162,7 +176,28 @@ export default function PracticePage() {
         }, 1000);
 
         return () => clearInterval(interval);
-    }, [step, currentIndex, currentQuestion]);
+    }, [step, currentIndex, currentQuestion, funBreak]);
+
+    // Map node: look up its topic and grade, then start straight away
+    useEffect(() => {
+        if (!student) return;
+        const id = getNodeIdFromUrl();
+        if (!id) return;
+        setNodeId(id);
+        loadWorld(student.id)
+            .then((world) => {
+                const found = findNode(world, id);
+                if (!found || found.type !== "river" || !found.unlocked) {
+                    router.push("/play");
+                    return;
+                }
+                setNode(found);
+                startPractice(found.topic, found.gradeLevel, found.skillId);
+            })
+            .catch((err) => setError(getErrorMessage(err)));
+        // startPractice is recreated every render; run once per student
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [student]);
 
     const flushPending = async () => {
         const pendingAnswersRaw = localStorage.getItem("pendingAnswers");
@@ -215,8 +250,9 @@ export default function PracticePage() {
         return Array.isArray(parsed.questions) ? parsed.questions : [];
     };
 
-    const startPractice = async (selectedTopic: Topic) => {
+    const startPractice = async (selectedTopic: Topic, gradeOverride?: GradeLevel, skillId?: string) => {
         if (!student) return;
+        const gradeLevel = gradeOverride ?? student.gradeLevel;
         setLoading(true);
         setError("");
         setTopic(selectedTopic);
@@ -230,10 +266,11 @@ export default function PracticePage() {
             const response = await practiceApi.start({
                 studentId: student.id,
                 topic: selectedTopic,
-                gradeLevel: student.gradeLevel,
+                gradeLevel,
+                skillId,
             });
 
-            cacheQuestions(response.questions, selectedTopic, student.gradeLevel);
+            cacheQuestions(response.questions, selectedTopic, gradeLevel);
 
             setQuestions(response.questions.slice(0, QUESTIONS_PER_SESSION));
             setSessionId(response.sessionId);
@@ -246,8 +283,9 @@ export default function PracticePage() {
             setAnswerResult(null);
             setResults(null);
             setEndedByLives(false);
+            setFunBreak(false);
         } catch (err) {
-            const cached = loadCachedQuestions(selectedTopic, student.gradeLevel);
+            const cached = loadCachedQuestions(selectedTopic, gradeLevel);
             if (cached.length) {
                 setOffline(true);
                 setQuestions(cached.slice(0, QUESTIONS_PER_SESSION));
@@ -261,6 +299,7 @@ export default function PracticePage() {
                 setAnswerResult(null);
                 setResults(null);
                 setEndedByLives(false);
+                setFunBreak(false);
             } else {
                 setError(getErrorMessage(err));
             }
@@ -386,6 +425,7 @@ export default function PracticePage() {
             if (isGameOverByLives) {
                 finalizeSession(true);
             } else if (currentIndex + 1 < questions.length) {
+                if ((currentIndex + 1) % FUN_BREAK_EVERY === 0) setFunBreak(true);
                 setCurrentIndex((prev) => prev + 1);
                 setSelectedAnswer(null);
                 setAnswerResult(null);
@@ -457,7 +497,24 @@ export default function PracticePage() {
             <Header />
 
             <div className="container mx-auto px-4 py-8">
-                {step === "topic" && (
+                {step === "topic" && nodeId && (
+                    <div className="max-w-xl mx-auto text-center py-12">
+                        {error ? (
+                            <>
+                                <p className="text-danger font-bold text-xl mb-4">{error}</p>
+                                <Button variant="primary" onClick={() => router.push("/play")}>
+                                    🗺️ Back to Map
+                                </Button>
+                            </>
+                        ) : (
+                            <p className="text-2xl text-gray-600">
+                                {node ? `${node.emoji} ${node.title}` : "Getting ready..."}
+                            </p>
+                        )}
+                    </div>
+                )}
+
+                {step === "topic" && !nodeId && (
                     <div className="max-w-4xl mx-auto">
                         <div className="text-center mb-8">
                             <h2 className="text-4xl font-bold text-primary mb-2">
@@ -518,7 +575,11 @@ export default function PracticePage() {
                     <div className="max-w-3xl mx-auto">
                         <div className="flex items-center justify-between mb-4">
                             <button
-                                onClick={() => { stopBackgroundMusic(); setStep("topic"); }}
+                                onClick={() => {
+                                    stopBackgroundMusic();
+                                    if (nodeId) router.push("/play");
+                                    else setStep("topic");
+                                }}
                                 className="text-primary font-bold hover:underline"
                             >
                                 ← Back
@@ -544,56 +605,65 @@ export default function PracticePage() {
 
                         <RiverGameCanvas ref={riverGameRef} />
 
-                        <Card colorful className="text-center p-8">
-                            <div className="text-2xl font-bold text-primary mb-1">
-                                🌊 River Crossing Adventure 🌊
-                            </div>
-                            <div className="text-lg text-gray-700 mb-4">
-                                {getAvatarNickname(student.avatar)} is helping {student.name}{" "}
-                                cross the river! Choose the right answer to step on the next
-                                stone.
-                            </div>
-                            <div className="text-3xl font-bold text-gray-800 mb-6">
-                                {currentQuestion.questionText}
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                {[
-                                    currentQuestion.option1,
-                                    currentQuestion.option2,
-                                    currentQuestion.option3,
-                                    currentQuestion.option4,
-                                ].map((option) => {
-                                    const isSelected = selectedAnswer === option;
-                                    const isCorrect = answerResult?.correctAnswer === option;
-                                    const isWrong = isSelected && answerResult && !answerResult.correct;
-
-                                    return (
-                                        <Button
-                                            key={option}
-                                            variant={isCorrect ? "success" : isWrong ? "danger" : "secondary"}
-                                            onClick={() => handleAnswer(option)}
-                                            disabled={selectedAnswer !== null}
-                                            className={`${isSelected ? "animate-pulse" : ""}`}
-                                        >
-                                            {option}
-                                        </Button>
-                                    );
-                                })}
-                            </div>
-
-                            {answerResult && (
-                                <div className="mt-6 text-lg font-bold">
-                                    {answerResult.correct ? (
-                                        <p className="text-success">Ayekoo! Correct ✅</p>
-                                    ) : (
-                                        <p className="text-danger">
-                                            Oops! Correct answer: {answerResult.correctAnswer}
-                                        </p>
-                                    )}
+                        {funBreak ? (
+                            <FunBreak
+                                onDone={(result, caught) => {
+                                    setFunBreak(false);
+                                    trackEvent(student.id, "fun_break", { result, caught, nodeId });
+                                }}
+                            />
+                        ) : (
+                            <Card colorful className="text-center p-8">
+                                <div className="text-2xl font-bold text-primary mb-1">
+                                    🌊 River Crossing Adventure 🌊
                                 </div>
-                            )}
-                        </Card>
+                                <div className="text-lg text-gray-700 mb-4">
+                                    {getAvatarNickname(student.avatar)} is helping {student.name}{" "}
+                                    cross the river! Choose the right answer to step on the next
+                                    stone.
+                                </div>
+                                <div className="text-3xl font-bold text-gray-800 mb-6">
+                                    {currentQuestion.questionText}
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    {[
+                                        currentQuestion.option1,
+                                        currentQuestion.option2,
+                                        currentQuestion.option3,
+                                        currentQuestion.option4,
+                                    ].map((option) => {
+                                        const isSelected = selectedAnswer === option;
+                                        const isCorrect = answerResult?.correctAnswer === option;
+                                        const isWrong = isSelected && answerResult && !answerResult.correct;
+
+                                        return (
+                                            <Button
+                                                key={option}
+                                                variant={isCorrect ? "success" : isWrong ? "danger" : "secondary"}
+                                                onClick={() => handleAnswer(option)}
+                                                disabled={selectedAnswer !== null}
+                                                className={`${isSelected ? "animate-pulse" : ""}`}
+                                            >
+                                                {option}
+                                            </Button>
+                                        );
+                                    })}
+                                </div>
+
+                                {answerResult && (
+                                    <div className="mt-6 text-lg font-bold">
+                                        {answerResult.correct ? (
+                                            <p className="text-success">Ayekoo! Correct ✅</p>
+                                        ) : (
+                                            <p className="text-danger">
+                                                Oops! Correct answer: {answerResult.correctAnswer}
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
+                            </Card>
+                        )}
 
                         <div className="flex items-center justify-between mt-6 text-lg font-bold">
                             <div>
@@ -648,9 +718,11 @@ export default function PracticePage() {
                                 <p>⏱️ Total Time: {results.totalTimeSpent}s</p>
                             </div>
 
-                            <div className="text-xl font-bold text-primary mb-6">
-                                🏆 Rewards: +{results.starsEarned} Stars ⭐
-                            </div>
+                            {!node && (
+                                <div className="text-xl font-bold text-primary mb-6">
+                                    🏆 Rewards: +{results.starsEarned} Stars ⭐
+                                </div>
+                            )}
 
                             {offline && (
                                 <p className="text-danger font-bold mb-4">
@@ -658,14 +730,25 @@ export default function PracticePage() {
                                 </p>
                             )}
 
-                            <div className="flex gap-4 justify-center">
-                                <Button variant="primary" onClick={() => topic && startPractice(topic)}>
-                                    🔄 Play Again
-                                </Button>
-                                <Button variant="secondary" onClick={() => router.push("/dashboard")}>
-                                    🏠 Dashboard
-                                </Button>
-                            </div>
+                            {node ? (
+                                <NodeResult
+                                    key={sessionId ?? "offline"}
+                                    studentId={student.id}
+                                    nodeId={node.id}
+                                    correct={results.correctAnswers}
+                                    total={questions.length}
+                                    onPlayAgain={() => startPractice(node.topic, node.gradeLevel, node.skillId)}
+                                />
+                            ) : (
+                                <div className="flex gap-4 justify-center">
+                                    <Button variant="primary" onClick={() => topic && startPractice(topic)}>
+                                        🔄 Play Again
+                                    </Button>
+                                    <Button variant="secondary" onClick={() => router.push("/dashboard")}>
+                                        🏠 Dashboard
+                                    </Button>
+                                </div>
+                            )}
                         </Card>
                     </div>
                 )}
