@@ -50,7 +50,9 @@ export function isInstalled() {
 }
 
 export function isIos() {
-    return /iphone|ipad|ipod/i.test(navigator.userAgent);
+    // iPadOS 13+ reports itself as a Mac; a touch screen gives it away
+    const ipadAsMac = navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+    return /iphone|ipad|ipod/i.test(navigator.userAgent) || ipadAsMac;
 }
 
 export function wasDismissedRecently() {

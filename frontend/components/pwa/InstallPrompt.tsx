@@ -4,7 +4,8 @@
  * InstallPrompt - asks a parent to put MathChampions on the home screen
  *
  * Android/Chrome: one tap opens the browser's install dialog.
- * iPhone: there is no install dialog, so it explains Share → Add to Home Screen.
+ * iPhone/iPad: there is no install dialog, so it explains Share → Add to Home Screen.
+ * The installed app there has its own storage, so the parent logs in again once.
  * Hidden once installed, and for a week after "Not now".
  */
 import React, { useEffect, useState } from "react";
@@ -51,7 +52,7 @@ export default function InstallPrompt() {
                 <p className="text-lg font-bold text-primary">Put MathChampions on your home screen</p>
                 <p className="text-gray-600">
                     {mode === "ios"
-                        ? "Tap the Share button, then “Add to Home Screen”. Your child can then open it like an app, even with no data."
+                        ? "Tap the Share button, then “Add to Home Screen”. Open the new icon and log in once more. Your child can then play like an app, even with no data."
                         : "Your child can open it like an app, and play even when the data runs out."}
                 </p>
             </div>
