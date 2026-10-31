@@ -6,6 +6,9 @@ import asyncio
 import random
 from prisma import Prisma
 
+from app.skills_content import skill_id_for
+from scripts.sync_skills import sync_skills
+
 # Ghana-specific names
 NAMES = ["Kofi", "Ama", "Kwame", "Abena", "Yaw", "Akua", "Kwesi", "Adjoa"]
 
@@ -403,6 +406,22 @@ async def seed_p3_questions(db: Prisma):
     return questions
 
 
+async def clear_unanswered_questions(db: Prisma) -> int:
+    """Delete questions no child has answered; answered ones keep their history"""
+    return await db.question.delete_many(where={"answers": {"none": {}}})
+
+
+async def insert_questions(db: Prisma, questions: list[dict]) -> int:
+    """Sync the skill graph, then insert questions tagged with their skill"""
+    await sync_skills(db)
+    for question in questions:
+        await db.question.create(data={
+            **question,
+            "skillId": skill_id_for(question["topic"], question["gradeLevel"]),
+        })
+    return len(questions)
+
+
 async def main():
     """Main seeding function"""
     db = Prisma()
@@ -414,8 +433,8 @@ async def main():
         # Check if questions already exist
         existing_count = await db.question.count()
         if existing_count > 0:
-            print(f"⚠️  Found {existing_count} existing questions. Deleting...")
-            await db.question.delete_many()
+            deleted = await clear_unanswered_questions(db)
+            print(f"⚠️  Found {existing_count} existing questions. Deleted {deleted} unanswered ones...")
         
         all_questions = []
         
@@ -447,8 +466,7 @@ async def main():
         
         # Insert all questions
         print(f"\n💾 Inserting {len(all_questions)} questions into database...")
-        for question in all_questions:
-            await db.question.create(data=question)
+        await insert_questions(db, all_questions)
         
         print(f"\n✅ Successfully seeded {len(all_questions)} questions!")
         print("\nBreakdown by grade level:")

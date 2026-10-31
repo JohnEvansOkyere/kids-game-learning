@@ -51,8 +51,16 @@ model Student {
   dateOfBirth DateTime @map("date_of_birth") @db.Date
   createdAt   DateTime @default(now()) @map("created_at")
   
+  // Adventure World wallet
+  coins        Int       @default(0)
+  equippedItem String?   @map("equipped_item") // item id from world_content.ITEMS
+  lastChestAt  DateTime? @map("last_chest_at")
+
   // Relations
   gameSessions GameSession[]
+  nodeProgress NodeProgress[]
+  items        StudentItem[]
+  events       Event[]
   
   @@map("students")
 }
@@ -71,12 +79,35 @@ model Question {
   option4       Int
   explanation   String?  @db.Text
   imageUrl      String?  @map("image_url")
+  // Nullable until every environment has run scripts/backfill_question_skills.py
+  skillId       String?  @map("skill_id")
   createdAt     DateTime @default(now()) @map("created_at")
   
   // Relations
+  skill         Skill?   @relation(fields: [skillId], references: [id])
   answers       Answer[]
   
+  @@index([skillId])
   @@map("questions")
+}
+
+// Maths skill graph; content lives in app/skills_content.py, synced by scripts/sync_skills.py
+model Skill {
+  id                String   @id // slug, e.g. p1-add-within-20
+  naccaCode         String?  @map("nacca_code") // closest NaCCA indicator; shared by add + subtract
+  gradeLevel        String   @map("grade_level")
+  strand            String
+  topic             String
+  title             String
+  parentDescription String   @map("parent_description") @db.Text
+  prerequisiteIds   String[] @map("prerequisite_ids")
+  order             Int      @map("sort_order")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  questions Question[]
+
+  @@map("skills")
 }
 
 // Game session (practice or battle)
@@ -117,4 +148,48 @@ model Answer {
   @@unique([sessionId, questionId])
   
   @@map("answers")
+}
+
+// Progress on one Adventure World node (node ids live in app/world_content.py)
+model NodeProgress {
+  id           String   @id @default(uuid())
+  studentId    String   @map("student_id")
+  student      Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  nodeId       String   @map("node_id")
+  stars        Int      @default(0) // best result, 0-3
+  bestAccuracy Float    @default(0) @map("best_accuracy")
+  plays        Int      @default(0)
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@unique([studentId, nodeId])
+  @@map("node_progress")
+}
+
+// Analytics event from the app (map opened, stage finished, chest opened...)
+// for retention metrics; names are listed in app/routers/events.py
+model Event {
+  id         String   @id @default(uuid())
+  clientId   String   @unique @map("client_id") // generated on the device, so offline retries don't double count
+  studentId  String   @map("student_id")
+  student    Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  name       String
+  props      Json?
+  occurredAt DateTime @map("occurred_at") // device time, clamped to the server's now
+  receivedAt DateTime @default(now()) @map("received_at")
+
+  @@index([studentId, occurredAt])
+  @@index([name, occurredAt])
+  @@map("events")
+}
+
+// Collectible or outfit owned by a student (item ids live in app/world_content.py)
+model StudentItem {
+  id         String   @id @default(uuid())
+  studentId  String   @map("student_id")
+  student    Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  itemId     String   @map("item_id")
+  acquiredAt DateTime @default(now()) @map("acquired_at")
+
+  @@unique([studentId, itemId])
+  @@map("student_items")
 }

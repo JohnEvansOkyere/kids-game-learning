@@ -39,6 +39,7 @@ class PracticeStartRequest(BaseModel):
     studentId: str
     topic: str  # counting, addition, subtraction, multiplication
     gradeLevel: str  # KG1, KG2, P1, P2, P3
+    skillId: Optional[str] = None  # set by map nodes; questions come from this skill
 
 
 class PracticeStartResponse(BaseModel):

@@ -14,6 +14,8 @@ from scripts.seed_questions import (
     seed_p1_questions,
     seed_p2_questions,
     seed_p3_questions,
+    clear_unanswered_questions,
+    insert_questions,
 )
 
 router = APIRouter()
@@ -77,7 +79,7 @@ async def seed_questions(
     """
     Seed the question bank (admin-only).
 
-    Set force=true to clear existing questions first.
+    Set force=true to clear existing questions first (answered ones are kept).
     """
     if x_admin_token != settings.ADMIN_SEED_TOKEN:
         raise HTTPException(
@@ -93,7 +95,7 @@ async def seed_questions(
         )
 
     if force and existing_count > 0:
-        await db.question.delete_many()
+        await clear_unanswered_questions(db)
 
     all_questions = []
     all_questions.extend(await seed_kg1_questions(db))
@@ -102,8 +104,7 @@ async def seed_questions(
     all_questions.extend(await seed_p2_questions(db))
     all_questions.extend(await seed_p3_questions(db))
 
-    for question in all_questions:
-        await db.question.create(data=question)
+    await insert_questions(db, all_questions)
 
     return {
         "message": "Questions seeded",

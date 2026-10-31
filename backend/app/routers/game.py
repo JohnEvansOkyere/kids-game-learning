@@ -15,6 +15,7 @@ from app.schemas_game import (
 )
 from app.core.database import get_db
 from app.routers.auth import get_current_user
+from app.skills_content import SKILLS_BY_ID
 from prisma import Prisma
 
 router = APIRouter()
@@ -66,13 +67,24 @@ async def start_practice_session(
                 detail=f"Invalid grade level. Must be one of: {', '.join(valid_grades)}"
             )
         
-        # Fetch random questions
-        questions = await db.question.find_many(
-            where={
-                "topic": request.topic,
-                "gradeLevel": request.gradeLevel
-            }
-        )
+        if request.skillId is not None and request.skillId not in SKILLS_BY_ID:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Unknown skill '{request.skillId}'"
+            )
+
+        # Fetch random questions: by skill when the map asks for one
+        questions = []
+        if request.skillId:
+            questions = await db.question.find_many(where={"skillId": request.skillId})
+        if not questions:
+            # Free play, or a database whose questions are not tagged with skills yet
+            questions = await db.question.find_many(
+                where={
+                    "topic": request.topic,
+                    "gradeLevel": request.gradeLevel
+                }
+            )
         
         if not questions:
             raise HTTPException(
