@@ -10,6 +10,8 @@ import {
     playCorrectSFX,
     playWrongSFX,
     playVictorySFX,
+    startBackgroundMusic,
+    stopBackgroundMusic,
 } from "@/app/practice/GameAudio";
 import type { Question, Student, Topic } from "@/lib/types";
 
@@ -414,6 +416,17 @@ export default function BattlePage() {
         const id = setInterval(() => setTimer((t) => t + 1), 1000);
         return () => clearInterval(id);
     }, [step, gameOver]);
+
+    /* Battle play: start background music; leave play: stop it */
+    useEffect(() => {
+        if (step === "play") {
+            startBackgroundMusic();
+            return () => stopBackgroundMusic();
+        }
+        if (step === "result" || step === "setup") {
+            stopBackgroundMusic();
+        }
+    }, [step]);
 
     /* Start battle — fetch questions and split between teams */
     const startBattle = useCallback(async () => {
