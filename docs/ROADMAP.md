@@ -66,7 +66,8 @@ Polish (can run in parallel)
 - [ ] Adaptive difficulty inside a node; spaced review of weak skills
 - [ ] Free 10-minute diagnostic → places child on the map
 - [ ] Shareable diagnostic report ("working at P1 level in subtraction")
-- [ ] Parent dashboard rebuilt as a skill map with on-track / behind status
+- [x] Parent dashboard shows a skill map: mastered / practising / learning per skill, own-grade progress, "needs more practice"
+- [ ] On-track / behind status on the skill map (needs the diagnostic, so skipped easier skills aren't counted as behind)
 - [ ] Weekly WhatsApp / SMS report with a real-world activity tip
 - [ ] Daily time limit set by parent
 - [ ] Twi / Ga / Ewe audio for question narration (KG first)

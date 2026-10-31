@@ -22,6 +22,7 @@ import type {
     ChestResponse,
     WalletResponse,
     AnalyticsEvent,
+    SkillMastery,
 } from "./types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -153,6 +154,13 @@ export const worldApi = {
 export const eventsApi = {
     async record(studentId: string, events: AnalyticsEvent[]): Promise<{ accepted: number }> {
         const response = await api.post<{ accepted: number }>(`/api/events/${studentId}`, { events });
+        return response.data;
+    },
+};
+
+export const skillsApi = {
+    async getMastery(studentId: string): Promise<SkillMastery[]> {
+        const response = await api.get<SkillMastery[]>(`/api/skills/students/${studentId}`);
         return response.data;
     },
 };

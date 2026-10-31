@@ -244,3 +244,29 @@ export interface AnalyticsEvent {
     occurredAt: string;
     props?: Record<string, unknown>;
 }
+
+// ============ Skill Types ============
+
+export type MasteryStatus = "not_started" | "learning" | "practising" | "mastered";
+
+export interface Skill {
+    id: string;
+    naccaCode: string | null;
+    gradeLevel: GradeLevel;
+    strand: string;
+    topic: Topic;
+    title: string;
+    parentDescription: string;
+    prerequisiteIds: string[];
+    order: number;
+}
+
+export interface SkillMastery {
+    skill: Skill;
+    attempts: number;
+    correct: number;
+    recentAccuracy: number | null;
+    status: MasteryStatus;
+    lastPracticedAt: string | null;
+    prerequisitesMastered: boolean;
+}

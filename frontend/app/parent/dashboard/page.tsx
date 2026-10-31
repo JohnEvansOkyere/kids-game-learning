@@ -6,8 +6,9 @@ import Header from "@/components/layout/Header";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Avatar from "@/components/ui/Avatar";
-import { practiceApi } from "@/lib/api";
-import type { GameSession, Parent, Student } from "@/lib/types";
+import SkillMap from "@/components/parent/SkillMap";
+import { practiceApi, skillsApi } from "@/lib/api";
+import type { GameSession, Parent, SkillMastery, Student } from "@/lib/types";
 
 /** Normalize session from API (handles camelCase or snake_case) */
 function norm(sess: Record<string, unknown>): {
@@ -52,6 +53,7 @@ interface StudentSummary {
     totalSessions: number;
     totalTimePracticed: number;
     lastPlayed: string | null;
+    mastery: SkillMastery[] | null; // null if it could not be loaded
 }
 
 export default function ParentDashboardPage() {
@@ -77,7 +79,10 @@ export default function ParentDashboardPage() {
             try {
                 const allSummaries: StudentSummary[] = [];
                 for (const s of parsedStudents) {
-                    const rawSessions = await practiceApi.getSessions(s.id);
+                    const [rawSessions, mastery] = await Promise.all([
+                        practiceApi.getSessions(s.id),
+                        skillsApi.getMastery(s.id).catch(() => null),
+                    ]);
                     const sessions = rawSessions.map((sess) => norm(sess as unknown as Record<string, unknown>));
                     const totalSessions = sessions.length;
                     const completed = sessions.filter((sess) => sess.completed);
@@ -119,6 +124,7 @@ export default function ParentDashboardPage() {
                         averageAccuracy,
                         bestAccuracy,
                         lastPlayed,
+                        mastery,
                     });
                 }
                 setSummaries(allSummaries);
@@ -193,7 +199,7 @@ export default function ParentDashboardPage() {
                         </div>
                     )}
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 gap-6">
                         {summaries.map((summary) => (
                             <Card key={summary.student.id} colorful className="p-6">
                                 <div className="flex items-center gap-4 mb-4">
@@ -254,6 +260,12 @@ export default function ParentDashboardPage() {
                                         </span>
                                     </p>
                                 </div>
+
+                                {summary.mastery ? (
+                                    <SkillMap mastery={summary.mastery} gradeLevel={summary.student.gradeLevel} />
+                                ) : (
+                                    <p className="mt-4 text-gray-500">Skill progress isn&apos;t available right now.</p>
+                                )}
                             </Card>
                         ))}
                     </div>
