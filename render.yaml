@@ -1,0 +1,13 @@
+# Render Blueprint (use from repo root). Backend only; DB add from Dashboard.
+services:
+  - type: web
+    name: mathchampions-api
+    runtime: python
+    rootDir: backend
+
+    buildCommand: pip install -r requirements.txt && prisma generate && prisma db push && python -m scripts.backfill_question_skills
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+
+    healthCheckPath: /health
+
+    # Set in Dashboard: DATABASE_URL, JWT_SECRET_KEY, CORS_ORIGINS (Vercel URL)

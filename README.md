@@ -139,12 +139,12 @@ kids-game-learning/
 
 See [plan.md](plan.md) for complete roadmap.
 
-## Deployment
+## Deployment (Render + Vercel)
 
-**Recommended:** Hetzner Cloud (€4.5/month)
-- South Africa datacenter (low latency for Ghana)
-- Docker-ready deployment
-- See deployment guide in plan.md
+- **Backend:** [Render](https://render.com) — Web Service + PostgreSQL. Root directory: `backend`. Build: `pip install -r requirements.txt && prisma generate && prisma db push && python -m scripts.backfill_question_skills`. Start: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`. Set `DATABASE_URL`, `JWT_SECRET_KEY`, and `CORS_ORIGINS` (your Vercel URL).
+- **Frontend:** [Vercel](https://vercel.com) — Next.js. Root directory: `frontend`. Set `NEXT_PUBLIC_API_URL` to your Render API URL (e.g. `https://mathchampions-api.onrender.com`).
+
+**Full step-by-step:** [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ## Design Principles
 
