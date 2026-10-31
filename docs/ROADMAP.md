@@ -92,7 +92,8 @@ Polish (can run in parallel)
 
 - [x] Installable PWA: manifest + icons, service worker saves every game page, "Add to home screen" card for parents
 - [x] Offline play: map, river stages and boss battles work with no data (questions for unlocked stages are kept on the phone); results and events sync when back online
-- [ ] Answers given offline are not saved, so they don't count towards mastery yet (stage results do sync)
+- [x] Answers given offline are kept on the phone and sent later, so they count towards mastery (`POST /api/game/practice/offline-sessions`)
+- [x] Saved game pages refresh after a deploy (the app asks the service worker when it opens online, at most every 6 hours)
 - [ ] Download a week of content ahead (more questions per skill, upcoming stages)
 - [ ] Replace the placeholder flag icon once the Ghanaian art style is commissioned
 - [x] Analytics events for retention metrics (queued offline on the device, deduplicated on the server)

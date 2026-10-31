@@ -9,6 +9,7 @@ import { playChestOpenSFX, playChestShakeSFX, playCoinSFX, playUnlockSFX } from 
 import { worldApi, getErrorMessage } from "@/lib/api";
 import { findCurrentNode, flushNodeCompletions, loadWorld, nodeHref, refreshOfflinePack, starString } from "@/lib/world";
 import { trackEvent } from "@/lib/events";
+import { flushOfflineSessions } from "@/lib/offlineAnswers";
 import type { ChestResponse, Student, World, WorldItem, WorldNode, WorldZone } from "@/lib/types";
 
 const ZONE_STYLES: Record<string, { bg: string; ring: string; title: string }> = {
@@ -61,6 +62,7 @@ export default function PlayPage() {
     const refresh = useCallback(async (studentId: string) => {
         try {
             await flushNodeCompletions();
+            void flushOfflineSessions();
             const loaded = await loadWorld(studentId);
             setWorld(loaded);
             setError("");

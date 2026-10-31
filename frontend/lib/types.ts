@@ -283,3 +283,19 @@ export interface OfflineSkillPack {
 export interface OfflinePack {
     skills: OfflineSkillPack[];
 }
+
+export interface OfflineSessionAnswer {
+    questionId: string;
+    answer: number;
+    timeSpent: number;
+    answeredAt: string;
+}
+
+export interface OfflineSessionRequest {
+    clientSessionId: string;
+    studentId: string;
+    topic: string;
+    gradeLevel: string;
+    startedAt: string;
+    answers: OfflineSessionAnswer[];
+}

@@ -16,6 +16,7 @@ import {
 import NodeResult from "@/components/world/NodeResult";
 import { findNode, getNodeIdFromUrl, loadWorld } from "@/lib/world";
 import { cacheQuestions, pickCachedQuestions } from "@/lib/questionCache";
+import { recordOfflineAnswer, startOfflineSession } from "@/lib/offlineAnswers";
 import type { GradeLevel, Question, Student, Topic, WorldNode } from "@/lib/types";
 
 const TOPICS: { id: Topic; label: string; icon: string }[] = [
@@ -516,10 +517,11 @@ export default function BattlePage() {
                 cacheQuestions(qs, topic, gradeLevel);
             } catch (err: any) {
                 // No connection: battle with questions saved on the phone; the map
-                // sends the boss result later, but these answers aren't recorded
+                // sends the boss result and these answers later
                 if (err?.response) throw err;
                 qs = pickCachedQuestions(topic, gradeLevel, 20);
                 if (qs.length < 6) throw err;
+                if (boss) sessionId = startOfflineSession(student.id, topic, gradeLevel);
             }
             sessionIdRef.current = sessionId;
             recordedRef.current = new Set();
@@ -611,10 +613,14 @@ export default function BattlePage() {
             if (boss && player === 1 && sessionId && !recordedRef.current.has(q.id)) {
                 recordedRef.current.add(q.id);
                 const timeSpent = Math.max(1, Math.round((Date.now() - questionShownAtRef.current) / 1000));
-                // Fire and forget: the tug of war never waits on the network
-                practiceApi
-                    .submitAnswer({ sessionId, questionId: q.id, answer: value, timeSpent })
-                    .catch(() => {});
+                if (sessionId.startsWith("offline-")) {
+                    recordOfflineAnswer(sessionId, { questionId: q.id, answer: value, timeSpent });
+                } else {
+                    // Fire and forget: the tug of war never waits on the network
+                    practiceApi
+                        .submitAnswer({ sessionId, questionId: q.id, answer: value, timeSpent })
+                        .catch(() => {});
+                }
             }
 
             if (value === q.correctAnswer) {

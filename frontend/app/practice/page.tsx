@@ -9,6 +9,7 @@ import { practiceApi, getErrorMessage } from "@/lib/api";
 import NodeResult from "@/components/world/NodeResult";
 import { findNode, getNodeIdFromUrl, loadWorld } from "@/lib/world";
 import { cacheQuestions, pickCachedQuestions } from "@/lib/questionCache";
+import { flushOfflineSessions, recordOfflineAnswer, startOfflineSession } from "@/lib/offlineAnswers";
 import RiverGameCanvas, { RiverGameHandle } from "./RiverGameCanvas";
 import FunBreak from "./FunBreak";
 import { trackEvent } from "@/lib/events";
@@ -141,6 +142,7 @@ export default function PracticePage() {
         const handleOnline = () => {
             setOffline(false);
             flushPending();
+            flushOfflineSessions();
         };
         const handleOffline = () => setOffline(true);
 
@@ -260,7 +262,7 @@ export default function PracticePage() {
             if (cached.length) {
                 setOffline(true);
                 setQuestions(cached);
-                setSessionId(`offline-${Date.now()}`);
+                setSessionId(startOfflineSession(student.id, selectedTopic, gradeLevel));
                 setStep("game");
                 setCurrentIndex(0);
                 setCorrectCount(0);
@@ -339,7 +341,10 @@ export default function PracticePage() {
                 playSplashSFX();
             }
 
-            if (!sessionId?.startsWith("offline-")) {
+            if (sessionId?.startsWith("offline-")) {
+                // Played with no data: kept on the phone for the parent report
+                recordOfflineAnswer(sessionId, { questionId: currentQuestion.id, answer: chosen, timeSpent });
+            } else {
                 queueAnswer({
                     sessionId: sessionId || "",
                     questionId: currentQuestion.id,

@@ -9,6 +9,9 @@
  * API calls go to the backend's own origin and are left alone; the app queues
  * results and events itself while offline.
  *
+ * After a deploy, pages saved at install would go stale; the app asks for a
+ * refresh (REFRESH_MESSAGE) when it opens online, at most every REFRESH_EVERY_MS.
+ *
  * Change VERSION to throw away every saved file on the next visit.
  */
 const VERSION = "v1";
@@ -33,6 +36,9 @@ const APP_PAGES = [
 ];
 
 const STATIC_ASSET_PATTERN = /\/_next\/static\/[^"'\s)\\]+/g;
+const REFRESH_MESSAGE = "refresh-pages";
+const REFRESH_EVERY_MS = 6 * 60 * 60 * 1000;
+const REFRESHED_AT_KEY = "/__mc-pages-refreshed-at";
 
 async function savePageAndAssets(path) {
     const response = await fetch(path, { cache: "no-cache" });
@@ -52,9 +58,27 @@ async function savePageAndAssets(path) {
     );
 }
 
-self.addEventListener("install", (event) => {
+async function saveAllPages() {
     // One failing page must not stop the rest from being saved
-    event.waitUntil(Promise.allSettled(APP_PAGES.map(savePageAndAssets)).then(() => self.skipWaiting()));
+    await Promise.allSettled(APP_PAGES.map(savePageAndAssets));
+    const pages = await caches.open(PAGES_CACHE);
+    await pages.put(REFRESHED_AT_KEY, new Response(String(Date.now())));
+}
+
+self.addEventListener("install", (event) => {
+    event.waitUntil(saveAllPages().then(() => self.skipWaiting()));
+});
+
+self.addEventListener("message", (event) => {
+    if (event.data !== REFRESH_MESSAGE) return;
+    event.waitUntil(
+        (async () => {
+            const pages = await caches.open(PAGES_CACHE);
+            const saved = await pages.match(REFRESHED_AT_KEY);
+            const last = saved ? Number(await saved.text()) : 0;
+            if (Date.now() - last >= REFRESH_EVERY_MS) await saveAllPages();
+        })()
+    );
 });
 
 self.addEventListener("activate", (event) => {

@@ -24,6 +24,7 @@ import type {
     AnalyticsEvent,
     SkillMastery,
     OfflinePack,
+    OfflineSessionRequest,
 } from "./types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -107,6 +108,14 @@ export const practiceApi = {
 
     async complete(data: PracticeCompleteRequest): Promise<PracticeCompleteResponse> {
         const response = await api.post<PracticeCompleteResponse>("/api/game/practice/complete", data);
+        return response.data;
+    },
+
+    async saveOfflineSession(data: OfflineSessionRequest): Promise<{ sessionId: string; accepted: number }> {
+        const response = await api.post<{ sessionId: string; accepted: number }>(
+            "/api/game/practice/offline-sessions",
+            data
+        );
         return response.data;
     },
 

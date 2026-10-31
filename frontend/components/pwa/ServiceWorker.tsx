@@ -18,9 +18,15 @@ export default function ServiceWorker() {
 
         // In development a service worker would serve stale pages after every edit
         if (process.env.NODE_ENV === "production" && "serviceWorker" in navigator) {
-            navigator.serviceWorker.register("/sw.js").catch(() => {
-                // offline support is a bonus; the app works without it
-            });
+            navigator.serviceWorker
+                .register("/sw.js")
+                .then((registration) => {
+                    // Keep every game's saved copy up to date after a deploy (sw.js limits how often)
+                    if (navigator.onLine) registration.active?.postMessage("refresh-pages");
+                })
+                .catch(() => {
+                    // offline support is a bonus; the app works without it
+                });
         }
 
         return () => window.removeEventListener("beforeinstallprompt", onPrompt);

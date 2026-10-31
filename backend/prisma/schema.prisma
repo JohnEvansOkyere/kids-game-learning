@@ -126,6 +126,7 @@ model GameSession {
   completed       Boolean   @default(false)
   startedAt       DateTime  @default(now()) @map("started_at")
   completedAt     DateTime? @map("completed_at")
+  clientId        String?   @unique @map("client_id") // set for sessions played offline, so a resend isn't counted twice
   
   // Relations
   answers         Answer[]
