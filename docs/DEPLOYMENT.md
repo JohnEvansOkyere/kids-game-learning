@@ -24,13 +24,11 @@ This guide gets MathChampions Ghana live with the backend on Render and the fron
      ```
    - **Instance Type:** Free (or paid for always-on).
 
-### 1.2 Add PostgreSQL
+### 1.2 Connect the Neon PostgreSQL database
 
-1. In the same Render project: **New** → **PostgreSQL**.
-2. Create the database; note the **Internal Database URL** (or External if you need it elsewhere).
-3. In your **Web Service** → **Environment**:
-   - **Add** → **Link existing resource** → select the Postgres database.  
-     This sets `DATABASE_URL` automatically.
+The app's Neon database is already provisioned on the `production` branch. In Neon, copy the pooled connection string named `DATABASE_URL` (the hostname includes `-pooler`). In Render, open the Web Service → **Environment** and add `DATABASE_URL` with that value. Use the unpooled `DATABASE_URL_UNPOOLED` only for schema changes and migrations. Keep the connection string private.
+
+If you choose Render Postgres instead, link it to the Web Service and Render will set `DATABASE_URL` automatically.
 
 ### 1.3 Environment Variables (Backend)
 
@@ -38,7 +36,7 @@ In the Web Service **Environment** tab, add:
 
 | Key | Value | Notes |
 |-----|--------|--------|
-| `DATABASE_URL` | (auto if you linked Postgres) | Otherwise paste the Postgres URL from Render. |
+| `DATABASE_URL` | Neon pooled connection string | Or the URL supplied by a linked Render Postgres database. |
 | `JWT_SECRET_KEY` | Long random string | e.g. `openssl rand -hex 32`. |
 | `CORS_ORIGINS` | Your frontend URL(s) | e.g. `https://mathchampions.vercel.app` or `https://your-app.vercel.app`. Comma-separated for multiple. |
 | `REDIS_URL` | (optional) | Omit if not using Redis; or use Upstash Redis URL. |
@@ -109,7 +107,7 @@ Test: open the Vercel app → register / login → use practice or battle. Reque
 ## 6. Checklist
 
 - [ ] Render: Web Service created, Root = `backend`, build/start commands set.
-- [ ] Render: Postgres created and linked (or `DATABASE_URL` set).
+- [ ] Render: `DATABASE_URL` set to Neon (or a linked Render Postgres database).
 - [ ] Render: `JWT_SECRET_KEY` and `CORS_ORIGINS` (Vercel URL) set.
 - [ ] Vercel: Project created, Root = `frontend` (if needed).
 - [ ] Vercel: `NEXT_PUBLIC_API_URL` = Render API URL.

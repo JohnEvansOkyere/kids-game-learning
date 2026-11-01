@@ -264,3 +264,4 @@ node_modules/
 
 # Browser-automation screenshots and logs
 .playwright-mcp/
+.neon

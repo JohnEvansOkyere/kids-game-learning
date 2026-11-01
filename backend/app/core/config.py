@@ -5,6 +5,7 @@ Loads from environment variables. Safe for local and production (Render, etc.).
 from pydantic import field_validator
 from pydantic_settings import BaseSettings
 from typing import List, Union
+import os
 
 
 class Settings(BaseSettings):
@@ -39,8 +40,18 @@ class Settings(BaseSettings):
         return v
 
     class Config:
-        env_file = ".env"
+        # Keep backend/.env for existing local settings, and also load the
+        # repository-level file produced by `neon env pull` when running the
+        # API locally. Deployed environments should provide DATABASE_URL
+        # through their environment (which takes precedence over both files).
+        env_file = (".env", "../.env.local")
         case_sensitive = True
+        # Neon also pulls branch metadata and an unpooled URL into the same
+        # env file; this service consumes only DATABASE_URL.
+        extra = "ignore"
 
 
 settings = Settings()
+# Prisma's generated Python client reads datasource values from the process
+# environment. Bridge values loaded from dotenv files into that environment.
+os.environ.setdefault("DATABASE_URL", settings.DATABASE_URL)
