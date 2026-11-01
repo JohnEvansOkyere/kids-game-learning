@@ -2,10 +2,10 @@
 Configuration settings for the application
 Loads from environment variables. Safe for local and production (Render, etc.).
 """
-from pydantic import field_validator
 from pydantic_settings import BaseSettings
-from typing import List, Union
+from typing import List
 import os
+import json
 
 
 class Settings(BaseSettings):
@@ -26,18 +26,23 @@ class Settings(BaseSettings):
     ADMIN_SEED_TOKEN: str = "change-me"
 
     # CORS: comma-separated in env, e.g. https://yourapp.vercel.app,https://yourapp.com
-    CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
+    # Keep this as a string so pydantic-settings does not try to JSON-decode
+    # Render's comma-separated environment value before our parser sees it.
+    CORS_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000"
 
     # App Settings
     PROJECT_NAME: str = "MathChampions Ghana"
     VERSION: str = "1.0.0"
 
-    @field_validator("CORS_ORIGINS", mode="before")
-    @classmethod
-    def parse_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
-        if isinstance(v, str):
-            return [x.strip() for x in v.split(",") if x.strip()]
-        return v
+    @property
+    def cors_origins(self) -> List[str]:
+        """Parse comma-separated origins (and tolerate JSON arrays) for FastAPI."""
+        value = self.CORS_ORIGINS.strip()
+        if value.startswith("["):
+            parsed = json.loads(value)
+            if isinstance(parsed, list):
+                return [str(origin).strip() for origin in parsed if str(origin).strip()]
+        return [origin.strip() for origin in value.split(",") if origin.strip()]
 
     class Config:
         # Keep backend/.env for existing local settings, and also load the
