@@ -21,8 +21,10 @@ import {
     playGameOverSFX,
     playVictorySFX,
     playSplashSFX,
-    startBackgroundMusic,
-    stopBackgroundMusic,
+    isSoundOff,
+    setSoundOff,
+    startTenseMusic,
+    stopTenseMusic,
 } from "./GameAudio";
 import type {
     AnswerSubmitResponse,
@@ -35,7 +37,15 @@ import type {
     WorldNode,
 } from "@/lib/types";
 
-const QUESTION_TIME_SECONDS = 30;
+// The croc is faster for older children: think fast! Long word problems get
+// extra reading time so slow readers are not punished for reading.
+function questionTimeFor(grade: GradeLevel | undefined, text: string): number {
+    const base = grade === "KG1" || grade === "KG2" ? 30 : 20;
+    const words = text.trim().split(/\s+/).length;
+    return base + Math.min(15, Math.round(Math.max(0, words - 6) * 0.7));
+}
+// Right with this many seconds (or fewer) left: "Phew, just in time!"
+const CLOSE_CALL_SECONDS = 3;
 const QUESTIONS_PER_SESSION = 10;
 const MAX_LIVES = 3;
 // A short no-maths tapping break after this many questions
@@ -89,7 +99,11 @@ export default function PracticePage() {
     const [questions, setQuestions] = useState<Question[]>([]);
     const [sessionId, setSessionId] = useState<string | null>(null);
     const [currentIndex, setCurrentIndex] = useState(0);
-    const [timeLeft, setTimeLeft] = useState(QUESTION_TIME_SECONDS);
+    const [timeLeft, setTimeLeft] = useState(30);
+    const [lives, setLives] = useState(MAX_LIVES);
+    // Out of lives, holding the fisherman's rope: one last chance
+    const [onRope, setOnRope] = useState(false);
+    const [soundOff, setSoundOffState] = useState(false);
     const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
     const [answerResult, setAnswerResult] = useState<AnswerSubmitResponse | null>(null);
     const [correctCount, setCorrectCount] = useState(0);
@@ -112,6 +126,12 @@ export default function PracticePage() {
     const correctRef = useRef(0);
     const wrongRef = useRef(0);
     const timeRef = useRef(0);
+    const streakRef = useRef(0);
+    const livesRef = useRef(MAX_LIVES);
+    const rescueUsedRef = useRef(false);
+    const ropeRef = useRef(false);
+    const gradeRef = useRef<GradeLevel | undefined>(undefined);
+    const questionTimeRef = useRef(30);
 
     const currentQuestion = questions[currentIndex];
 
@@ -129,14 +149,22 @@ export default function PracticePage() {
         }
     }, [router]);
 
+    useEffect(() => setSoundOffState(isSoundOff()), []);
+
+    const toggleSound = () => {
+        const off = !soundOff;
+        setSoundOff(off);
+        setSoundOffState(off);
+    };
+
     // Start/stop background music when game step changes
     useEffect(() => {
         if (step === "game") {
-            startBackgroundMusic();
+            startTenseMusic();
         } else {
-            stopBackgroundMusic();
+            stopTenseMusic();
         }
-        return () => stopBackgroundMusic();
+        return () => stopTenseMusic();
     }, [step]);
 
     useEffect(() => {
@@ -162,10 +190,18 @@ export default function PracticePage() {
         // The clock starts when the break ends
         if (funBreak) return;
 
-        setTimeLeft(QUESTION_TIME_SECONDS);
+        const questionTime = questionTimeFor(gradeRef.current, currentQuestion.questionText);
+        questionTimeRef.current = questionTime;
+        setTimeLeft(questionTime);
+        riverGameRef.current?.setDanger(0);
         questionStartTimeRef.current = Date.now();
+        if (currentIndex > 0 && currentIndex === questions.length - 1) {
+            riverGameRef.current?.announce("🏝️ LAST STROKE! SWIM!", "#69f0ae");
+        }
 
         const interval = setInterval(() => {
+            const elapsed = (Date.now() - questionStartTimeRef.current) / 1000;
+            riverGameRef.current?.setDanger(elapsed / questionTime);
             setTimeLeft((prev) => {
                 if (prev <= 1) {
                     clearInterval(interval);
@@ -231,11 +267,18 @@ export default function PracticePage() {
         setLoading(true);
         setError("");
         setTopic(selectedTopic);
+        gradeRef.current = gradeLevel;
+        livesRef.current = MAX_LIVES;
+        rescueUsedRef.current = false;
+        ropeRef.current = false;
+        setLives(MAX_LIVES);
+        setOnRope(false);
 
         // Reset refs
         correctRef.current = 0;
         wrongRef.current = 0;
         timeRef.current = 0;
+        streakRef.current = 0;
 
         try {
             const response = await practiceApi.start({
@@ -312,19 +355,54 @@ export default function PracticePage() {
         // Update refs immediately (never stale)
         if (!isWrong) {
             correctRef.current += 1;
+            streakRef.current += 1;
         } else {
             wrongRef.current += 1;
+            streakRef.current = 0;
         }
         timeRef.current += timeSpent;
 
-        const newWrongCount = wrongRef.current;
-        const livesAfter = Math.max(0, MAX_LIVES - newWrongCount);
+        // Lives, with one rescue rope per session so a struggling child keeps
+        // practising instead of being knocked out after three slips
+        let livesAfter = livesRef.current;
+        let rescue = false;
+        if (isWrong) {
+            if (ropeRef.current) {
+                ropeRef.current = false;
+                livesAfter = 0;
+            } else {
+                livesAfter = Math.max(0, livesAfter - 1);
+                const moreLeft = currentIndex + 1 < questions.length;
+                if (livesAfter === 0 && !rescueUsedRef.current && moreLeft) {
+                    rescue = true;
+                    rescueUsedRef.current = true;
+                    ropeRef.current = true;
+                }
+            }
+        } else if (ropeRef.current) {
+            ropeRef.current = false;
+            livesAfter = 1;
+        }
+        livesRef.current = livesAfter;
+        setLives(livesAfter);
+        setOnRope(ropeRef.current);
 
         setSelectedAnswer(chosen);
         setTotalTimeSpent(timeRef.current);
 
-        // Trigger river animation
-        riverGameRef.current?.handleAnswerResult(!isWrong);
+        const isGameOverByLives = livesAfter <= 0 && !ropeRef.current;
+        const isLastQuestion = isGameOverByLives || currentIndex + 1 >= questions.length;
+        const questionTime = questionTimeRef.current;
+
+        // Swim stroke, or the croc lunges
+        riverGameRef.current?.handleAnswerResult(!isWrong, {
+            fast: timeSpent <= questionTime / 3,
+            streak: streakRef.current >= 3 && streakRef.current % 3 === 0,
+            close: !isWrong && timeSpent >= questionTime - CLOSE_CALL_SECONDS,
+            livesLeft: livesAfter,
+            isLast: isLastQuestion,
+            rescue,
+        });
 
         if (offline || !sessionId || sessionId.startsWith("offline-")) {
             const isCorrect = !isWrong;
@@ -397,8 +475,7 @@ export default function PracticePage() {
             }
         }
 
-        const isGameOverByLives = livesAfter <= 0;
-
+        // The last answer gets time for the escape or the chomp to play out
         setTimeout(() => {
             if (isGameOverByLives) {
                 finalizeSession(true);
@@ -410,13 +487,14 @@ export default function PracticePage() {
             } else {
                 finalizeSession(false);
             }
-        }, 1500);
+            // Slips stay on screen longer so the right answer can sink in
+        }, isLastQuestion ? 2800 : isWrong ? 2600 : 1500);
     };
 
     const finalizeSession = async (endedBecauseOfLives: boolean) => {
         if (!sessionId) return;
 
-        stopBackgroundMusic();
+        stopTenseMusic();
         setEndedByLives(endedBecauseOfLives);
 
         // Always use local refs for results (server values may lag behind)
@@ -557,7 +635,7 @@ export default function PracticePage() {
                                 type="button"
                                 aria-label="Back"
                                 onClick={() => {
-                                    stopBackgroundMusic();
+                                    stopTenseMusic();
                                     if (nodeId) router.push("/play");
                                     else setStep("topic");
                                 }}
@@ -579,11 +657,25 @@ export default function PracticePage() {
                                     <span className="absolute inset-x-2 top-[3px] h-1 rounded-full bg-white/40" />
                                 </div>
                             </div>
-                            <div className="flex shrink-0 items-center gap-0.5" aria-label={`${Math.max(0, MAX_LIVES - wrongCount)} lives left`}>
-                                {Array.from({ length: MAX_LIVES }, (_, i) => (
-                                    <HeartIcon key={i} size={28} filled={i < MAX_LIVES - wrongCount} />
-                                ))}
-                            </div>
+                            {onRope ? (
+                                <span className="shrink-0 animate-pulse rounded-full bg-secondary/40 px-3 py-1 font-display text-sm font-semibold text-ink">
+                                    🛶 Last chance!
+                                </span>
+                            ) : (
+                                <div className="flex shrink-0 items-center gap-0.5" aria-label={`${lives} lives left`}>
+                                    {Array.from({ length: MAX_LIVES }, (_, i) => (
+                                        <HeartIcon key={i} size={28} filled={i < lives} />
+                                    ))}
+                                </div>
+                            )}
+                            <button
+                                type="button"
+                                onClick={toggleSound}
+                                aria-label={soundOff ? "Turn sound on" : "Turn sound off"}
+                                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-lg shadow-lift ring-1 ring-ink/5 active:scale-95"
+                            >
+                                {soundOff ? "🔇" : "🔊"}
+                            </button>
                         </div>
 
                         <div className="mb-3 flex items-center justify-between px-1 font-display text-sm font-semibold text-ink-muted">
@@ -601,7 +693,11 @@ export default function PracticePage() {
                             </div>
                         )}
 
-                        <RiverGameCanvas ref={riverGameRef} />
+                        <RiverGameCanvas
+                            ref={riverGameRef}
+                            totalQuestions={questions.length}
+                            danger={!funBreak && selectedAnswer === null && timeLeft <= 5}
+                        />
 
                         {funBreak ? (
                             <FunBreak
@@ -613,7 +709,7 @@ export default function PracticePage() {
                         ) : (
                             <Card colorful className="text-center !p-5 sm:!p-7">
                                 <p className="font-display text-sm font-semibold uppercase tracking-wider text-ink-muted">
-                                    🌊 {getAvatarNickname(student.avatar)} is crossing the river
+                                    🐊 Swim, {getAvatarNickname(student.avatar)}! The crocodile is coming!
                                 </p>
                                 <div className="mb-6 mt-2 font-display text-4xl font-semibold leading-tight text-ink sm:text-5xl">
                                     {currentQuestion.questionText}
@@ -655,9 +751,14 @@ export default function PracticePage() {
                                                 Ayekoo! Correct!
                                             </p>
                                         ) : (
-                                            <p className="animate-bounce-in rounded-full bg-danger/10 px-4 py-2 font-display text-lg font-semibold text-danger-dark">
-                                                Not quite. The answer is {answerResult.correctAnswer}
-                                            </p>
+                                            <div className="animate-bounce-in">
+                                                <p className="rounded-full bg-danger/10 px-4 py-2 font-display text-lg font-semibold text-danger-dark">
+                                                    SNAP! The answer was {answerResult.correctAnswer}
+                                                </p>
+                                                {answerResult.explanation && (
+                                                    <p className="mt-2 font-semibold text-ink-soft">{answerResult.explanation}</p>
+                                                )}
+                                            </div>
                                         ))}
                                 </div>
                             </Card>
@@ -665,7 +766,8 @@ export default function PracticePage() {
 
                         <div className="mt-4 flex justify-center">
                             <span className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 font-display text-base font-semibold text-ink-soft shadow-lift ring-1 ring-ink/5">
-                                🪨 Stones crossed: <span className="text-ink">{correctCount}</span>
+                                🏝️ Shore in <span className="text-ink">{questions.length - currentIndex}</span>{" "}
+                                {questions.length - currentIndex === 1 ? "stroke" : "strokes"}
                             </span>
                         </div>
                     </div>
@@ -679,7 +781,7 @@ export default function PracticePage() {
 
                             {endedByLives ? (
                                 <h2 className="mb-2 font-display text-4xl font-semibold text-danger-dark">
-                                    🐊 Oh no, {student.name}!
+                                    🐊 CHOMP! The crocodile got your sandal!
                                 </h2>
                             ) : (
                                 <h2 className="mb-2 font-display text-4xl font-semibold text-ink">
@@ -694,26 +796,27 @@ export default function PracticePage() {
 
                             {endedByLives && (
                                 <p className="mb-4 text-lg font-semibold text-danger-dark">
-                                    The crocodile caught you, but you crossed {results.correctAnswers} stones!
+                                    {student.name} jumped back into the canoe, safe, after {results.correctAnswers} strokes.
+                                    Every try makes you a stronger swimmer. Try again!
                                 </p>
                             )}
 
                             {!endedByLives && results.accuracy >= 80 && (
                                 <p className="mb-4 text-lg font-semibold text-success-dark">
-                                    You made it across the river safely!
+                                    You out-swam the crocodile and reached the shore!
                                 </p>
                             )}
 
                             {!endedByLives && results.accuracy < 80 && results.accuracy > 0 && (
                                 <p className="mb-4 text-lg font-semibold text-primary">
-                                    You made it! Keep practising to cross faster. 💪
+                                    You escaped, but the crocodile got close! Keep practising to swim faster. 💪
                                 </p>
                             )}
 
                             <div className="mb-6 grid grid-cols-3 divide-x divide-ink/10 overflow-hidden rounded-2xl bg-white/80 ring-1 ring-ink/10">
                                 {[
-                                    { label: "Stones crossed", value: results.correctAnswers },
-                                    { label: "Slipped", value: results.wrongAnswers },
+                                    { label: "Strokes", value: results.correctAnswers },
+                                    { label: "Snaps", value: results.wrongAnswers },
                                     { label: "Time", value: `${results.totalTimeSpent}s` },
                                 ].map((stat) => (
                                     <div key={stat.label} className="px-2 py-3">

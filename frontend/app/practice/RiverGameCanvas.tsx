@@ -7,20 +7,34 @@ import React, {
     useRef,
 } from "react";
 import type * as Phaser from "phaser";
-import type { RiverScene } from "./RiverScene";
+import type { AnswerFx, RiverScene } from "./RiverScene";
 
 export interface RiverGameHandle {
-    handleAnswerResult(isCorrect: boolean): void;
+    handleAnswerResult(isCorrect: boolean, fx: AnswerFx): void;
+    setDanger(level: number): void;
+    announce(text: string, color?: string): void;
 }
 
-const RiverGameCanvas = forwardRef<RiverGameHandle>((_props, ref) => {
+interface Props {
+    totalQuestions: number;
+    /** Turns the frame red when the croc is close */
+    danger?: boolean;
+}
+
+const RiverGameCanvas = forwardRef<RiverGameHandle, Props>(({ totalQuestions, danger }, ref) => {
     const containerRef = useRef<HTMLDivElement | null>(null);
     const gameRef = useRef<Phaser.Game | null>(null);
     const sceneRef = useRef<RiverScene | null>(null);
 
     useImperativeHandle(ref, () => ({
-        handleAnswerResult(isCorrect: boolean) {
-            sceneRef.current?.handleAnswerResult(isCorrect);
+        handleAnswerResult(isCorrect: boolean, fx: AnswerFx) {
+            sceneRef.current?.handleAnswerResult(isCorrect, fx);
+        },
+        setDanger(level: number) {
+            sceneRef.current?.setDanger(level);
+        },
+        announce(text: string, color?: string) {
+            sceneRef.current?.announce(text, color);
         },
     }));
 
@@ -41,7 +55,7 @@ const RiverGameCanvas = forwardRef<RiverGameHandle>((_props, ref) => {
                     width: 900,
                     height: 400,
                     parent,
-                    backgroundColor: "#87ceeb",
+                    backgroundColor: "#1a1033",
                     scene: [Scene],
                     scale: {
                         mode: PhaserLib.Scale.FIT,
@@ -53,7 +67,9 @@ const RiverGameCanvas = forwardRef<RiverGameHandle>((_props, ref) => {
                 gameRef.current = game;
 
                 game.events.on(PhaserLib.Core.Events.READY, () => {
-                    sceneRef.current = game.scene.getScene("RiverScene") as RiverScene;
+                    const scene = game.scene.getScene("RiverScene") as RiverScene;
+                    scene.setTotalQuestions(totalQuestions);
+                    sceneRef.current = scene;
                 });
             }
         );
@@ -64,14 +80,18 @@ const RiverGameCanvas = forwardRef<RiverGameHandle>((_props, ref) => {
             gameRef.current = null;
             sceneRef.current = null;
         };
+        // The game is built once per mount; the page remounts it for a new session
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     return (
         <div className="mb-4 flex w-full justify-center">
-            {/* Sky-coloured while Phaser loads, so there is no blank flash */}
+            {/* Storm-coloured while Phaser loads, so there is no blank flash */}
             <div
                 ref={containerRef}
-                className="w-full max-w-4xl overflow-hidden rounded-3xl bg-gradient-to-b from-sky-300 to-sky-500 shadow-card ring-4 ring-white"
+                className={`w-full max-w-4xl overflow-hidden rounded-3xl bg-gradient-to-b from-[#1a1033] to-[#0c1f2b] shadow-card ring-4 transition-colors duration-300 ${
+                    danger ? "ring-danger" : "ring-white"
+                }`}
                 style={{ aspectRatio: "900/400" }}
             />
         </div>

@@ -1,10 +1,11 @@
 /**
  * Avatar Component - the child's animal, optionally on a coloured character plate
  *
- * Without `plate` it is a bare emoji sized like text (old behaviour).
- * With `plate` it sits on a round gradient disc, so it reads as a character.
+ * The illustrated animal stays readable at small HUD size and on selection cards.
+ * With `plate` it sits on a round coloured disc.
  */
 import React from "react";
+import Image from "next/image";
 import type { AvatarType } from "@/lib/types";
 
 interface AvatarProps {
@@ -14,15 +15,6 @@ interface AvatarProps {
     outfit?: string | null; // emoji of the equipped outfit
     plate?: boolean;
 }
-
-const avatarEmojis: Record<AvatarType, string> = {
-    lion: "🦁",
-    elephant: "🐘",
-    cheetah: "🐆",
-    monkey: "🐵",
-    eagle: "🦅",
-    fish: "🐠",
-};
 
 // One warm, distinct colour per animal so siblings are told apart at a glance
 const plateColors: Record<AvatarType, string> = {
@@ -35,16 +27,16 @@ const plateColors: Record<AvatarType, string> = {
 };
 
 const sizeClasses = {
-    small: "text-4xl",
-    medium: "text-6xl",
-    large: "text-8xl",
+    small: "h-12 w-12",
+    medium: "h-20 w-20",
+    large: "h-32 w-32",
 };
 
 // Plate diameter and emoji size
 const plateSizes = {
-    small: "h-12 w-12 text-[1.6rem]",
-    medium: "h-20 w-20 text-5xl",
-    large: "h-32 w-32 text-[4.5rem]",
+    small: "h-12 w-12",
+    medium: "h-20 w-20",
+    large: "h-32 w-32",
 };
 
 export default function Avatar({
@@ -60,7 +52,7 @@ export default function Avatar({
                 className={`plate relative flex shrink-0 items-center justify-center rounded-full ring-[3px] ring-white ${plateSizes[size]} ${className}`}
                 style={{ backgroundImage: plateColors[type] }}
             >
-                <span className="leading-none drop-shadow-[0_2px_0_rgba(0,0,0,0.12)]">{avatarEmojis[type]}</span>
+                <Image src={`/avatars/${type}.webp`} alt="" width={256} height={256} unoptimized className="h-[90%] w-[90%] object-contain drop-shadow-[0_2px_0_rgba(0,0,0,0.12)]" />
                 {outfit && (
                     <span className="absolute -top-[0.28em] left-1/2 -translate-x-1/2 text-[0.62em] leading-none drop-shadow-[0_2px_0_rgba(0,0,0,0.15)]">
                         {outfit}
@@ -74,7 +66,7 @@ export default function Avatar({
         <div
             className={`relative flex items-center justify-center ${sizeClasses[size]} ${className}`}
         >
-            {avatarEmojis[type]}
+            <Image src={`/avatars/${type}.webp`} alt={`${type} avatar`} width={256} height={256} unoptimized className="h-full w-full object-contain" />
             {outfit && (
                 <span className="absolute -top-[0.35em] left-1/2 -translate-x-1/2 text-[0.55em] leading-none">
                     {outfit}

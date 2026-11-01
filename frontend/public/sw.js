@@ -14,7 +14,7 @@
  *
  * Change VERSION to throw away every saved file on the next visit.
  */
-const VERSION = "v1";
+const VERSION = "v2";
 const PAGES_CACHE = `mc-pages-${VERSION}`;
 const STATIC_CACHE = `mc-static-${VERSION}`;
 const NETWORK_TIMEOUT_MS = 4000;
@@ -28,11 +28,19 @@ const APP_PAGES = [
     "/battle",
     "/games/counting-catch",
     "/games/number-pop",
+    "/games/market-day",
     "/student/select",
     "/dashboard",
     "/parent/dashboard",
     "/login",
     "/",
+];
+const APP_ASSETS = [
+    "/market-day-bg.webp",
+    "/river-backdrop.webp",
+    ...["village", "farm", "market", "forest", "coast"].map((name) => `/zones/${name}.webp`),
+    ...["lion", "elephant", "cheetah", "monkey", "eagle", "fish"].map((name) => `/avatars/${name}.webp`),
+    ...["orange", "banana", "mango", "corn", "bread", "coconut", "pineapple", "tomatoes", "fish", "basket", "watermelon", "rice", "shopkeeper", "customer-1", "customer-2", "customer-3", "customer-4", "customer-5", "customer-6"].map((name) => `/market/${name}.webp`),
 ];
 
 const STATIC_ASSET_PATTERN = /\/_next\/static\/[^"'\s)\\]+/g;
@@ -60,9 +68,16 @@ async function savePageAndAssets(path) {
 
 async function saveAllPages() {
     // One failing page must not stop the rest from being saved
-    await Promise.allSettled(APP_PAGES.map(savePageAndAssets));
+    await Promise.allSettled([...APP_PAGES.map(savePageAndAssets), ...APP_ASSETS.map(saveAsset)]);
     const pages = await caches.open(PAGES_CACHE);
     await pages.put(REFRESHED_AT_KEY, new Response(String(Date.now())));
+}
+
+async function saveAsset(path) {
+    const response = await fetch(path, { cache: "no-cache" });
+    if (!response.ok) return;
+    const cache = await caches.open(STATIC_CACHE);
+    await cache.put(path, response);
 }
 
 self.addEventListener("install", (event) => {

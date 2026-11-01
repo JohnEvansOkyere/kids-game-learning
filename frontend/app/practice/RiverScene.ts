@@ -1,545 +1,690 @@
 /**
- * RiverScene - Phaser scene for the river crossing game.
+ * RiverScene - Phaser scene for the "Croc Escape" game.
+ * The hero has fallen out of a canoe and must swim to the shore while a
+ * crocodile closes in. Right answers are swim strokes; the croc creeps closer
+ * while the clock runs and lunges on wrong answers.
  * Imported dynamically by RiverGameCanvas so Phaser never loads during SSR.
  */
 import * as Phaser from "phaser";
+import { playChompSFX, playHeartbeatSFX, playThunderSFX } from "./GameAudio";
+
+export interface AnswerFx {
+    /** Answered in the first third of the clock */
+    fast: boolean;
+    /** Three or more right in a row */
+    streak: boolean;
+    livesLeft: number;
+    /** The session ends after this answer */
+    isLast: boolean;
+    /** Right answer with only a few seconds left */
+    close?: boolean;
+    /** Out of lives, but a fisherman throws a rope: one more chance */
+    rescue?: boolean;
+}
+
+// How far behind the hero the croc sits, by lives left (index = lives)
+const CROC_GAP_BY_LIVES = [0, 150, 215, 290];
+const SWIM_Y = 250;
+const START_X = 300;
+const SHORE_X = 790;
+const CANOE_X = 150;
+// The croc holds still while the child reads, then starts to creep
+const READING_GRACE = 0.35;
 
 export class RiverScene extends Phaser.Scene {
-    private heroContainer!: Phaser.GameObjects.Container;
-    private crocContainer!: Phaser.GameObjects.Container;
-    private crocMouthParts: Phaser.GameObjects.GameObject[] = [];
-    private stones: { x: number; y: number }[] = [];
-    private currentStoneIndex = 0;
-    private maxStones = 10;
-    private ripples: Phaser.GameObjects.Ellipse[] = [];
-    private clouds: Phaser.GameObjects.Container[] = [];
-    private heroIdleTween?: Phaser.Tweens.Tween;
-    private wrongCount = 0;
+    private hero!: Phaser.GameObjects.Container;
+    private heroArms: Phaser.GameObjects.Rectangle[] = [];
+    private croc!: Phaser.GameObjects.Container;
+    private crocJawTop!: Phaser.GameObjects.Container;
+    private crocJawBottom!: Phaser.GameObjects.Container;
+    private crocWake!: Phaser.GameObjects.Graphics;
+    private canoe!: Phaser.GameObjects.Container;
+    private dangerOverlay!: Phaser.GameObjects.Rectangle;
+    private flash!: Phaser.GameObjects.Rectangle;
+    private rain: Phaser.GameObjects.Rectangle[] = [];
+    private waves: Phaser.GameObjects.Ellipse[] = [];
+    private label!: Phaser.GameObjects.Text;
+    private sandal!: Phaser.GameObjects.Rectangle;
+    private fisherBoat?: Phaser.GameObjects.Container;
+    private rope?: Phaser.GameObjects.Graphics;
+
+    private totalStrokes = 10;
+    private strokes = 0;
+    private livesLeft = 3;
+    private danger = 0;
+    private crocPushback = 0;
+    private busy = false;
+    private finished = false;
+    private nextHeartbeat = 0;
+    private nextLightning = 4000;
+    private armPhase = 0;
+    private reducedMotion = false;
 
     constructor() {
         super("RiverScene");
     }
 
+    preload() {
+        this.load.image("river-backdrop", "/river-backdrop.webp");
+    }
+
+    /** Called before the first question so stroke length fits the session */
+    setTotalQuestions(n: number) {
+        this.totalStrokes = Math.max(1, n);
+    }
+
+    /** 0 = clock just started, 1 = out of time. The croc creeps in as it rises. */
+    setDanger(level: number) {
+        this.danger = Phaser.Math.Clamp(level, 0, 1);
+    }
+
+    /** A big word across the sky, e.g. for the last question */
+    announce(text: string, color = "#ffffff") {
+        if (this.label) this.showLabel(text, color);
+    }
+
     create() {
         const W = this.scale.width;
         const H = this.scale.height;
+        this.reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 
-        this.buildSky(W, H);
-        this.buildSun(W);
-        this.buildClouds(W);
-        this.buildTopBank(W, H);
-        this.buildRiver(W, H);
-        this.buildBottomBank(W, H);
-        this.buildRipples(W, H);
-        this.buildStones(W, H);
+        const painted = this.textures.exists("river-backdrop");
+        if (painted) this.add.image(W / 2, H / 2, "river-backdrop").setDisplaySize(W, H);
+        else this.buildSky(W);
+        this.buildWater(W, H, painted);
+        this.buildShore(W, H);
+        this.buildCanoe();
+        this.buildCroc();
         this.buildHero();
-        this.buildCrocodile(W, H);
+        this.buildRain(W, H);
+
+        this.dangerOverlay = this.add.rectangle(W / 2, H / 2, W, H, 0xb71c1c, 0).setDepth(50);
+        this.flash = this.add.rectangle(W / 2, H / 2, W, H, 0xffffff, 0).setDepth(60);
+        this.label = this.add
+            .text(W / 2, 70, "", {
+                fontFamily: "Fredoka, sans-serif",
+                fontSize: "34px",
+                fontStyle: "bold",
+                color: "#ffffff",
+                stroke: "#000000",
+                strokeThickness: 6,
+            })
+            .setOrigin(0.5)
+            .setDepth(70)
+            .setAlpha(0);
+
+        this.playIntro();
     }
 
-    private buildSky(W: number, H: number) {
-        for (let i = 0; i < 8; i++) {
-            const t = i / 8;
-            const r = Math.round(100 + t * 35);
-            const g = Math.round(180 + t * 40);
-            const color = (r << 16) | (g << 8) | 255;
-            this.add.rectangle(W / 2, (H * t) / 2 + H / 32, W, H / 16 + 2, color);
+    // ---------- World ----------
+
+    private buildSky(W: number) {
+        const bands = [0x1a1033, 0x241640, 0x2f1d4a, 0x3b2652, 0x4a2f57, 0x5c3a5a];
+        bands.forEach((c, i) => this.add.rectangle(W / 2, i * 20 + 10, W, 21, c));
+
+        // Storm clouds
+        for (let i = 0; i < 9; i++) {
+            const cx = i * 110 + Phaser.Math.Between(-20, 20);
+            const cy = Phaser.Math.Between(10, 45);
+            const s = 0.8 + Math.random() * 0.6;
+            this.add.ellipse(cx, cy, 140 * s, 45 * s, 0x15101f, 0.85);
+            this.add.ellipse(cx + 30, cy - 12, 90 * s, 35 * s, 0x1f1830, 0.85);
+        }
+
+        // Far jungle silhouette
+        const g = this.add.graphics();
+        g.fillStyle(0x0f1a14, 1);
+        g.beginPath();
+        g.moveTo(0, 120);
+        for (let x = 0; x <= W; x += 30) g.lineTo(x, 100 - Math.abs(Math.sin(x * 0.02)) * 18 - (x % 90 === 0 ? 10 : 0));
+        g.lineTo(W, 120);
+        g.closePath();
+        g.fillPath();
+    }
+
+    private buildWater(W: number, H: number, painted: boolean) {
+        const top = 118;
+        const bands = [0x1d3b4a, 0x183444, 0x142d3c, 0x102634, 0x0c1f2b, 0x081822];
+        const bh = (H - top) / bands.length;
+        bands.forEach((c, i) => this.add.rectangle(W / 2, top + bh * i + bh / 2, W, bh + 1, c, painted ? 0.16 : 1));
+
+        this.waves = [];
+        for (let i = 0; i < 26; i++) {
+            const w = this.add.ellipse(
+                Math.random() * W,
+                top + 10 + Math.random() * (H - top - 20),
+                30 + Math.random() * 50,
+                3,
+                0x5f8fa3,
+                0.25
+            );
+            (w as any)._speed = 20 + Math.random() * 30;
+            this.waves.push(w);
         }
     }
 
-    private buildSun(W: number) {
-        const sx = W - 80, sy = 45;
-        for (let i = 8; i > 0; i--) {
-            this.add.circle(sx, sy, 20 + i * 6, 0xfff176, 0.08);
-        }
-        this.add.circle(sx, sy, 22, 0xfff9c4);
-        this.add.circle(sx, sy, 16, 0xffee58);
-    }
+    private buildShore(W: number, H: number) {
+        // Sand slope rising out of the water on the right
+        const g = this.add.graphics();
+        g.fillStyle(0xc9a35b, 1);
+        g.beginPath();
+        g.moveTo(SHORE_X + 10, H);
+        g.lineTo(SHORE_X + 40, 150);
+        g.lineTo(W, 125);
+        g.lineTo(W, H);
+        g.closePath();
+        g.fillPath();
+        g.fillStyle(0xa8843f, 1);
+        g.fillTriangle(SHORE_X + 10, H, SHORE_X + 40, 150, SHORE_X + 30, H);
 
-    private buildClouds(W: number) {
-        [
-            { x: 80, y: 30, s: 1 },
-            { x: 300, y: 20, s: 0.8 },
-            { x: 550, y: 35, s: 1.1 },
-            { x: 750, y: 18, s: 0.7 },
-        ].forEach((c) => {
-            const cont = this.add.container(c.x, c.y);
-            cont.add(this.add.ellipse(0, 0, 60 * c.s, 24 * c.s, 0xffffff, 0.85));
-            cont.add(this.add.ellipse(-20 * c.s, -4 * c.s, 40 * c.s, 20 * c.s, 0xffffff, 0.85));
-            cont.add(this.add.ellipse(22 * c.s, -2 * c.s, 36 * c.s, 18 * c.s, 0xffffff, 0.85));
-            this.clouds.push(cont);
-        });
-    }
-
-    private buildTopBank(W: number, H: number) {
-        const bh = H * 0.2;
-        this.add.rectangle(W / 2, bh / 2, W, bh, 0x2d5016);
-        this.add.rectangle(W / 2, bh * 0.35, W, bh * 0.7, 0x3a6b1e);
-
-        // Grass blades
-        for (let i = 0; i < W; i += 12) {
-            const h = 6 + Math.sin(i * 0.3) * 4;
-            this.add.rectangle(i + 2, bh - h / 2, 5, h, 0x4a8c2a);
+        // Foam line
+        for (let y = 160; y < H; y += 18) {
+            this.add.ellipse(SHORE_X + 18 + (H - y) * 0.11, y, 14, 4, 0xe0f2f1, 0.5);
         }
 
-        this.buildPalmTrees(W, bh);
-        this.buildBushes(W, bh, true);
-        this.buildFlowers(W, bh);
-    }
-
-    private buildPalmTrees(W: number, bankH: number) {
-        [60, 220, 430, 650, 830].forEach((px) => {
-            const base = bankH - 4;
-
-            // Trunk
-            this.add.rectangle(px, base - 25, 8, 50, 0x6d4c1d);
-            this.add.rectangle(px, base - 25, 4, 50, 0x7d5a2a);
-
-            // Fronds
-            const colors = [0x228b22, 0x2e8b57, 0x32cd32, 0x228b22, 0x2e8b57];
-            for (let l = 0; l < 5; l++) {
-                const angle = -Math.PI / 2 + (l - 2) * 0.5;
-                const len = 30 + Math.random() * 15;
-                const endX = px + Math.cos(angle) * len;
-                const endY = base - 50 + Math.sin(angle) * len;
-                const midX = px + Math.cos(angle) * len * 0.5;
-                const midY = base - 50 + Math.sin(angle) * len * 0.5 - 8;
-
-                const gfx = this.add.graphics();
-                gfx.fillStyle(colors[l], 1);
-                gfx.beginPath();
-                gfx.moveTo(px, base - 48);
-                gfx.lineTo(midX - 6, midY);
-                gfx.lineTo(endX, endY);
-                gfx.lineTo(midX + 6, midY);
-                gfx.closePath();
-                gfx.fillPath();
-            }
-
-            // Coconuts
-            this.add.circle(px + 6, base - 46, 4, 0x8b6914);
-            this.add.circle(px - 5, base - 44, 3, 0x8b6914);
-        });
-    }
-
-    private buildBushes(W: number, bankH: number, top: boolean) {
-        for (let i = 0; i < 10; i++) {
-            const bx = i * (W / 10) + 20 + Math.random() * 30;
-            const by = top ? bankH - 6 : bankH + 10;
-            const sz = 10 + Math.random() * 8;
-            this.add.circle(bx, by, sz, 0x2d8a2d);
-            this.add.circle(bx - 4, by - 3, sz * 0.7, 0x3cb043);
-            this.add.circle(bx + 3, by - 5, sz * 0.5, 0x50c878);
-        }
-    }
-
-    private buildFlowers(W: number, bankH: number) {
-        const colors = [0xff6b6b, 0xffd93d, 0xff8fd8, 0xffffff, 0xff9a3c];
-        for (let i = 0; i < 15; i++) {
-            const fx = Math.random() * W;
-            const fy = bankH - 2 - Math.random() * 10;
-            this.add.rectangle(fx, fy + 3, 1, 6, 0x3a6b1e);
-            this.add.circle(fx, fy, 2.5, colors[Math.floor(Math.random() * colors.length)]);
-            this.add.circle(fx, fy, 1, 0xffeb3b);
-        }
-    }
-
-    private buildRiver(W: number, H: number) {
-        const rt = H * 0.2;
-        const rh = H * 0.6;
-        this.add.rectangle(W / 2, rt + rh / 2, W, rh, 0x0d47a1);
-        this.add.rectangle(W / 2, rt + rh * 0.4, W, rh * 0.8, 0x1565c0);
-        this.add.rectangle(W / 2, rt + rh * 0.3, W, rh * 0.6, 0x1976d2);
-        this.add.rectangle(W / 2, rt + rh * 0.15, W, rh * 0.3, 0x1e88e5);
-
-        // Static light streaks
-        for (let i = 0; i < 30; i++) {
-            const rx = Math.random() * W;
-            const ry = rt + Math.random() * rh;
-            this.add.ellipse(rx, ry, 40 + Math.random() * 60, 3, 0x42a5f5, 0.3);
-        }
-    }
-
-    private buildBottomBank(W: number, H: number) {
-        const bt = H * 0.8;
-        const bh = H * 0.2;
-        this.add.rectangle(W / 2, bt + bh / 2, W, bh, 0x2d5016);
-        this.add.rectangle(W / 2, bt + bh * 0.2, W, bh * 0.4, 0x3a6b1e);
-
-        for (let i = 0; i < W; i += 10) {
-            const h = 5 + Math.sin(i * 0.4) * 3;
-            this.add.rectangle(i + 2, bt + h / 2, 4, h, 0x4a8c2a);
+        // Palm on the beach
+        const px = W - 45;
+        this.add.rectangle(px, 105, 8, 60, 0x4e3417);
+        for (let l = 0; l < 5; l++) {
+            const a = -Math.PI / 2 + (l - 2) * 0.55;
+            const fg = this.add.graphics();
+            fg.fillStyle(0x1f4d2a, 1);
+            fg.fillTriangle(px, 76, px + Math.cos(a) * 42 - 5, 76 + Math.sin(a) * 30, px + Math.cos(a) * 42 + 5, 80 + Math.sin(a) * 30);
         }
 
-        this.buildBushes(W, bt, false);
+        // Ghana flag = safety
+        const fx = W - 75, fy = 120;
+        this.add.rectangle(fx, fy, 3, 44, 0x4e3417);
+        this.add.rectangle(fx + 13, fy - 17, 22, 7, 0xce1126);
+        this.add.rectangle(fx + 13, fy - 10, 22, 7, 0xfcd116);
+        this.add.rectangle(fx + 13, fy - 3, 22, 7, 0x006b3f);
+        this.add.star(fx + 13, fy - 10, 5, 1.5, 3.5, 0x000000);
 
-        // Ghana flag at finish
-        const fx = W - 50, fy = bt + 4;
-        this.add.rectangle(fx + 1, fy + 15, 3, 30, 0x6d4c1d);
-        this.add.rectangle(fx + 13, fy + 3, 20, 7, 0xce1126);
-        this.add.rectangle(fx + 13, fy + 10, 20, 7, 0xfcd116);
-        this.add.rectangle(fx + 13, fy + 17, 20, 7, 0x006b3f);
-        this.add.star(fx + 13, fy + 10, 5, 1.5, 3.5, 0x000000);
+        // Campfire glow so the shore feels warm and safe
+        this.add.circle(W - 40, 150, 26, 0xffa726, 0.18);
+        this.add.circle(W - 40, 152, 6, 0xff7043);
+        this.add.circle(W - 40, 148, 4, 0xffeb3b);
     }
 
-    private buildRipples(W: number, H: number) {
-        this.ripples = [];
-        for (let i = 0; i < 20; i++) {
-            const ry = H * 0.25 + Math.random() * H * 0.5;
-            const rw = 40 + Math.random() * 40;
-            const r = this.add.ellipse(Math.random() * W, ry, rw, 4, 0x90caf9, 0.35);
-            (r as any)._dir = Math.random() > 0.5 ? 1 : -1;
-            (r as any)._speed = 15 + Math.random() * 25;
-            this.ripples.push(r);
-        }
-    }
+    private buildCanoe() {
+        const c = this.add.container(CANOE_X, SWIM_Y - 10);
+        const g = this.add.graphics();
+        // Upside-down hull
+        g.fillStyle(0x5d3a1a, 1);
+        g.beginPath();
+        g.moveTo(-70, 0);
+        g.lineTo(-55, -18);
+        g.lineTo(55, -18);
+        g.lineTo(70, 0);
+        g.closePath();
+        g.fillPath();
+        g.fillStyle(0x7a4f26, 1);
+        g.fillRect(-50, -15, 100, 4);
+        c.add(g);
+        // Floating paddle
+        c.add(this.add.rectangle(10, 26, 60, 4, 0x8d6e3f).setAngle(12));
+        c.add(this.add.ellipse(44, 33, 18, 8, 0x8d6e3f).setAngle(12));
+        c.setAngle(-6);
+        this.canoe = c;
 
-    private buildStones(W: number, H: number) {
-        this.stones = [];
-        this.maxStones = 10;
-        for (let i = 0; i < this.maxStones; i++) {
-            const x = W * (0.08 + (0.84 / (this.maxStones - 1)) * i);
-            const y = H * 0.48 + (i % 2 === 0 ? -18 : 18);
-
-            // Shadow
-            this.add.ellipse(x + 2, y + 5, 48, 18, 0x000000, 0.2);
-            // Stone body
-            this.add.ellipse(x, y, 48, 22, 0x9e9e9e);
-            this.add.ellipse(x - 2, y - 2, 36, 14, 0xbdbdbd);
-            this.add.ellipse(x - 4, y - 4, 20, 8, 0xd6d6d6);
-            // Moss
-            this.add.ellipse(x + 16, y + 4, 10, 6, 0x4caf50, 0.5);
-            this.add.ellipse(x - 18, y + 2, 8, 5, 0x4caf50, 0.5);
-
-            this.stones.push({ x, y });
-        }
+        this.tweens.add({ targets: c, angle: 6, y: c.y + 4, duration: 1800, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
     }
 
     private buildHero() {
-        const s = this.stones[0];
-        const cont = this.add.container(s.x, s.y - 34);
+        const c = this.add.container(START_X, SWIM_Y);
 
-        // Hair
-        cont.add(this.add.circle(0, -18, 11, 0x1a1a1a));
+        // Ripple ring around the swimmer
+        const ring = this.add.ellipse(0, 6, 54, 12, 0x9ec9d6, 0.35);
+        c.add(ring);
+        this.tweens.add({ targets: ring, scaleX: 1.25, alpha: 0.1, duration: 700, repeat: -1 });
+
+        // Arms (stroke animation swaps them)
+        const armL = this.add.rectangle(-14, -4, 6, 18, 0x8b5e3c).setOrigin(0.5, 1);
+        const armR = this.add.rectangle(14, -4, 6, 18, 0x8b5e3c).setOrigin(0.5, 1);
+        this.heroArms = [armL, armR];
+        c.add([armL, armR]);
+
+        // Shoulders at the waterline
+        c.add(this.add.rectangle(0, 2, 22, 8, 0xff7043));
         // Head
-        cont.add(this.add.circle(0, -16, 9, 0x8b5e3c));
-        // Eyes whites
-        cont.add(this.add.circle(-3, -18, 2.5, 0xffffff));
-        cont.add(this.add.circle(3, -18, 2.5, 0xffffff));
-        // Pupils
-        cont.add(this.add.circle(-3, -18, 1.2, 0x000000));
-        cont.add(this.add.circle(3, -18, 1.2, 0x000000));
-        // Mouth
-        cont.add(this.add.ellipse(0, -13, 5, 2, 0xd32f2f));
-        // Body (shirt)
-        cont.add(this.add.rectangle(0, -1, 14, 16, 0xff7043));
-        // Shirt detail
-        cont.add(this.add.rectangle(0, -4, 8, 5, 0xffab91));
-        // Arms
-        cont.add(this.add.rectangle(-10, -2, 5, 12, 0x8b5e3c));
-        cont.add(this.add.rectangle(10, -2, 5, 12, 0x8b5e3c));
-        // Legs
-        cont.add(this.add.rectangle(-4, 13, 5, 10, 0x1565c0));
-        cont.add(this.add.rectangle(4, 13, 5, 10, 0x1565c0));
-        // Shoes
-        cont.add(this.add.rectangle(-4, 19, 6, 3, 0x5d4037));
-        cont.add(this.add.rectangle(4, 19, 6, 3, 0x5d4037));
+        c.add(this.add.circle(0, -12, 11, 0x1a1a1a));
+        c.add(this.add.circle(0, -10, 9, 0x8b5e3c));
+        // Wide, scared eyes
+        c.add(this.add.circle(-3.5, -12, 3, 0xffffff));
+        c.add(this.add.circle(3.5, -12, 3, 0xffffff));
+        c.add(this.add.circle(-3, -12, 1.4, 0x000000));
+        c.add(this.add.circle(4, -12, 1.4, 0x000000));
+        c.add(this.add.ellipse(0, -5, 4, 4, 0x5d1f1f));
 
-        this.heroContainer = cont;
-
-        this.heroIdleTween = this.tweens.add({
-            targets: cont,
-            y: cont.y - 3,
-            duration: 800,
-            yoyo: true,
-            repeat: -1,
-            ease: "Sine.easeInOut",
-        });
+        // Water covering the lower body
+        c.add(this.add.rectangle(0, 12, 40, 14, 0x183444));
+        c.setScale(1.4);
+        this.hero = c;
     }
 
-    private buildCrocodile(W: number, H: number) {
-        const cx = W * 0.12;
-        const cy = H * 0.68;
-        const cont = this.add.container(cx, cy);
+    private buildCroc() {
+        const c = this.add.container(START_X - CROC_GAP_BY_LIVES[3], SWIM_Y + 4).setScale(1.35);
 
-        // Body shape via Graphics path (safe)
-        const body = this.add.graphics();
-        body.fillStyle(0x2e7d32, 1);
-        body.beginPath();
-        body.moveTo(-50, 0);
-        body.lineTo(-40, -10);
-        body.lineTo(-20, -12);
-        body.lineTo(0, -10);
-        body.lineTo(30, -8);
-        body.lineTo(50, -4);
-        body.lineTo(55, 0);
-        body.lineTo(50, 6);
-        body.lineTo(30, 10);
-        body.lineTo(0, 12);
-        body.lineTo(-20, 10);
-        body.lineTo(-40, 8);
-        body.closePath();
-        body.fillPath();
+        this.crocWake = this.add.graphics();
+        c.add(this.crocWake);
 
-        // Belly
-        body.fillStyle(0x4caf50, 1);
-        body.beginPath();
-        body.moveTo(-40, -1);
-        body.lineTo(-20, -6);
-        body.lineTo(0, -5);
-        body.lineTo(20, -3);
-        body.lineTo(40, 0);
-        body.lineTo(20, 3);
-        body.lineTo(0, 3);
-        body.lineTo(-20, 1);
-        body.closePath();
-        body.fillPath();
-
-        // Spine bumps
-        body.fillStyle(0x1b5e20, 1);
-        for (let i = -30; i <= 30; i += 10) {
-            body.fillCircle(i, -10 + Math.abs(i) * 0.05, 3);
+        // Long shadow under the water
+        c.add(this.add.ellipse(-70, 10, 190, 26, 0x05140c, 0.55));
+        // Ridges breaking the surface
+        for (let i = 0; i < 6; i++) {
+            c.add(this.add.triangle(-30 - i * 22, 0, 0, 6, 5, -2, 10, 6, 0x1e3b22));
         }
 
-        // Tail
-        body.fillStyle(0x1b5e20, 1);
-        body.beginPath();
-        body.moveTo(-50, 0);
-        body.lineTo(-70, -6);
-        body.lineTo(-65, 0);
-        body.lineTo(-70, 6);
-        body.closePath();
-        body.fillPath();
+        // Lower jaw (opens downward on a lunge)
+        const jb = this.add.container(10, 4);
+        const jbg = this.add.graphics();
+        jbg.fillStyle(0x2e5e2f, 1);
+        jbg.fillRoundedRect(0, -3, 62, 9, 4);
+        jbg.fillStyle(0x8e1b1b, 1);
+        jbg.fillRect(4, -3, 52, 3);
+        jb.add(jbg);
+        for (let t = 0; t < 7; t++) jb.add(this.add.triangle(8 + t * 7, -6, 0, 4, 3, -3, 6, 4, 0xfafafa));
+        this.crocJawBottom = jb;
 
-        // Snout
-        body.fillStyle(0x388e3c, 1);
-        body.fillRect(40, -6, 22, 10);
+        // Head + upper jaw (snout pivots up)
+        const jt = this.add.container(10, 0);
+        const jtg = this.add.graphics();
+        jtg.fillStyle(0x2f6b33, 1);
+        jtg.fillRoundedRect(0, -8, 66, 11, 5);
+        jtg.fillStyle(0x1e3b22, 1);
+        jtg.fillCircle(60, -9, 3);
+        jtg.fillCircle(52, -9, 3);
+        jt.add(jtg);
+        for (let t = 0; t < 7; t++) jt.add(this.add.triangle(8 + t * 7, 5, 0, -4, 3, 3, 6, -4, 0xfafafa));
+        this.crocJawTop = jt;
+        this.sandal = this.add.rectangle(66, 0, 22, 9, 0x8d4f2a).setVisible(false);
+        jt.add(this.sandal);
 
-        cont.add(body);
+        c.add([jb, jt]);
 
-        // Eyes
-        cont.add(this.add.circle(44, -10, 5, 0xffeb3b));
-        cont.add(this.add.circle(56, -9, 5, 0xffeb3b));
-        cont.add(this.add.circle(44, -10, 2.5, 0x000000));
-        cont.add(this.add.circle(56, -9, 2.5, 0x000000));
-        // Red glint
-        cont.add(this.add.circle(43, -10.5, 0.8, 0xff0000));
-        cont.add(this.add.circle(55, -9.5, 0.8, 0xff0000));
+        // Head dome + glowing eyes (always above water)
+        c.add(this.add.ellipse(4, -6, 34, 16, 0x2f6b33));
+        const glow1 = this.add.circle(-2, -14, 9, 0xffd600, 0.25);
+        const glow2 = this.add.circle(12, -14, 9, 0xffd600, 0.25);
+        c.add([glow1, glow2]);
+        c.add(this.add.circle(-2, -14, 5, 0xffeb3b));
+        c.add(this.add.circle(12, -14, 5, 0xffeb3b));
+        c.add(this.add.ellipse(-1, -14, 2, 7, 0x000000));
+        c.add(this.add.ellipse(13, -14, 2, 7, 0x000000));
+        this.tweens.add({ targets: [glow1, glow2], alpha: 0.05, duration: 900, yoyo: true, repeat: -1 });
 
-        // Legs
-        cont.add(this.add.rectangle(-25, 14, 6, 8, 0x2e7d32));
-        cont.add(this.add.rectangle(-5, 14, 6, 8, 0x2e7d32));
-        cont.add(this.add.rectangle(15, 14, 6, 8, 0x2e7d32));
-        cont.add(this.add.rectangle(35, 14, 6, 8, 0x2e7d32));
-
-        // Mouth (hidden, shown on wrong answer)
-        const mouth = this.add.rectangle(60, 2, 18, 5, 0xc62828);
-        mouth.setVisible(false);
-        cont.add(mouth);
-        this.crocMouthParts.push(mouth);
-
-        // Teeth
-        for (let t = 0; t < 5; t++) {
-            const tooth = this.add.triangle(
-                53 + t * 4, -2,
-                0, 4, 2, 0, 4, 4,
-                0xffffff
-            );
-            tooth.setVisible(false);
-            cont.add(tooth);
-            this.crocMouthParts.push(tooth);
-        }
-
-        this.crocContainer = cont;
-
-        // Idle float
-        this.tweens.add({
-            targets: cont,
-            y: cy - 5,
-            duration: 1200,
-            yoyo: true,
-            repeat: -1,
-            ease: "Sine.easeInOut",
-        });
-        this.tweens.add({
-            targets: cont,
-            x: cx + 8,
-            duration: 2000,
-            yoyo: true,
-            repeat: -1,
-            ease: "Sine.easeInOut",
-        });
+        this.croc = c;
     }
 
-    handleAnswerResult(isCorrect: boolean) {
-        if (!this.heroContainer || !this.crocContainer) return;
+    private buildRain(W: number, H: number) {
+        this.rain = [];
+        for (let i = 0; i < 90; i++) {
+            const r = this.add.rectangle(Math.random() * W, Math.random() * H, 1.5, 12, 0xb0c4de, 0.35).setAngle(12).setDepth(40);
+            (r as any)._speed = 380 + Math.random() * 200;
+            this.rain.push(r);
+        }
+    }
 
-        if (isCorrect) {
-            this.heroIdleTween?.stop();
+    // ---------- Story beats ----------
 
-            const nextIdx = Math.min(this.currentStoneIndex + 1, this.maxStones - 1);
-            const ns = this.stones[nextIdx];
-            this.currentStoneIndex = nextIdx;
-
-            const startY = this.heroContainer.y;
-            const endY = ns.y - 34;
-            const peakY = Math.min(startY, endY) - 30;
-
+    private playIntro() {
+        // Start standing in the canoe, then tumble into the water
+        this.busy = true;
+        this.hero.setPosition(CANOE_X, SWIM_Y - 46).setAngle(0);
+        this.croc.setAlpha(0);
+        this.time.delayedCall(350, () => {
             this.tweens.add({
-                targets: this.heroContainer,
-                x: ns.x,
-                duration: 400,
-                ease: "Sine.easeInOut",
-            });
-            this.tweens.add({
-                targets: this.heroContainer,
-                y: peakY,
-                duration: 200,
-                ease: "Sine.easeOut",
+                targets: this.hero,
+                x: START_X,
+                y: SWIM_Y,
+                angle: 360,
+                duration: 650,
+                ease: "Quad.easeIn",
                 onComplete: () => {
-                    this.tweens.add({
-                        targets: this.heroContainer,
-                        y: endY,
-                        duration: 200,
-                        ease: "Bounce.easeOut",
-                        onComplete: () => {
-                            this.spawnSparkles(ns.x, ns.y - 20);
-                            this.heroIdleTween = this.tweens.add({
-                                targets: this.heroContainer,
-                                y: this.heroContainer.y - 3,
-                                duration: 800,
-                                yoyo: true,
-                                repeat: -1,
-                                ease: "Sine.easeInOut",
-                            });
-                        },
-                    });
+                    this.hero.setAngle(0);
+                    this.spawnSplash(this.hero.x, SWIM_Y + 6, 18);
+                    this.shake(180, 0.006);
+                    this.showLabel("SPLASH! SWIM!", "#90caf9");
+                    this.tweens.add({ targets: this.croc, alpha: 1, duration: 900, delay: 300 });
+                    this.time.delayedCall(500, () => (this.busy = false));
                 },
             });
+        });
+    }
 
-            this.tweens.add({
-                targets: this.heroContainer,
-                scaleX: 1.15,
-                scaleY: 0.85,
-                yoyo: true,
-                duration: 150,
-                repeat: 1,
-            });
+    handleAnswerResult(isCorrect: boolean, fx: AnswerFx) {
+        if (!this.hero || !this.croc || this.finished) return;
+        this.livesLeft = fx.livesLeft;
+
+        if (isCorrect) {
+            this.strokes++;
+            const grabbedRope = !!this.rope;
+            this.endRescue();
+            if (fx.isLast) {
+                this.escape();
+                return;
+            }
+            if (grabbedRope) {
+                this.crocPushback = 150;
+                this.tweens.add({ targets: this, crocPushback: 0, duration: 3000, delay: 800, ease: "Sine.easeIn" });
+                this.showLabel("YOU GRABBED THE ROPE!", "#69f0ae");
+            } else if (fx.close) {
+                // The jaws slam shut right behind the swimmer
+                this.openJaws(true);
+                this.time.delayedCall(260, () => {
+                    this.openJaws(false);
+                    playChompSFX();
+                });
+                this.showLabel("😅 PHEW! JUST IN TIME!", "#ffeb3b");
+            } else if (fx.fast || fx.streak) {
+                // A burst of speed shoves the croc back for a moment
+                this.crocPushback = fx.streak ? 120 : 80;
+                this.tweens.add({ targets: this, crocPushback: 0, duration: 2500, delay: 600, ease: "Sine.easeIn" });
+                this.showLabel(fx.streak ? "🔥 SUPER SWIMMER!" : "⚡ TURBO STROKE!", "#ffeb3b");
+            }
+            this.swimTo(this.strokeX(this.strokes), fx.fast ? 380 : 600);
+            this.spawnSplash(this.hero.x + 10, SWIM_Y, fx.fast ? 14 : 8);
+        } else if (fx.rescue) {
+            this.lunge(false);
+            this.time.delayedCall(900, () => this.startRescue());
+        } else if (fx.livesLeft <= 0) {
+            this.endRescue();
+            this.caught();
         } else {
-            this.wrongCount++;
+            this.lunge(fx.isLast);
+        }
+    }
 
-            // Hero wobble
+    private strokeX(n: number) {
+        return START_X + ((SHORE_X - 60 - START_X) * Math.min(n, this.totalStrokes)) / this.totalStrokes;
+    }
+
+    private swimTo(x: number, duration: number) {
+        this.tweens.add({
+            targets: this.hero,
+            x,
+            duration,
+            ease: "Cubic.easeOut",
+        });
+        // Quick flurry of arm strokes
+        this.tweens.add({
+            targets: this,
+            armPhase: this.armPhase + Math.PI * 4,
+            duration,
+        });
+    }
+
+    private lunge(isLast: boolean) {
+        this.busy = true;
+        const startX = this.croc.x;
+        const bite = this.hero.x - 95;
+
+        this.openJaws(true);
+        this.tweens.add({
+            targets: this.croc,
+            x: bite,
+            y: SWIM_Y - 6,
+            duration: 260,
+            ease: "Quad.easeIn",
+            onComplete: () => {
+                this.openJaws(false);
+                playChompSFX();
+                this.shake(220, 0.012);
+                this.spawnSplash(this.hero.x - 20, SWIM_Y + 4, 16);
+                this.showLabel("SNAP!", "#ff5252");
+                // Hero flinches forward, just escaping
+                this.tweens.add({ targets: this.hero, x: this.hero.x + 14, angle: 12, duration: 120, yoyo: true });
+                this.tweens.add({
+                    targets: this.croc,
+                    x: startX,
+                    y: SWIM_Y + 4,
+                    duration: 700,
+                    delay: 200,
+                    ease: "Sine.easeOut",
+                    onComplete: () => {
+                        this.busy = false;
+                        if (isLast) this.escape();
+                    },
+                });
+            },
+        });
+    }
+
+    private caught() {
+        // Kept safe for little ones: the croc only steals a sandal and the
+        // child scrambles back onto the canoe. Nobody goes under the water.
+        this.busy = true;
+        this.finished = true;
+        this.openJaws(true);
+        this.tweens.add({
+            targets: this.croc,
+            x: this.hero.x - 90,
+            y: SWIM_Y - 8,
+            duration: 300,
+            ease: "Quad.easeIn",
+            onComplete: () => {
+                this.openJaws(false);
+                this.sandal.setVisible(true);
+                playChompSFX();
+                this.shake(300, 0.012);
+                this.spawnSplash(this.hero.x, SWIM_Y, 22);
+                this.showLabel("CHOMP! IT GOT YOUR SANDAL!", "#ff5252");
+                // Leap back to the canoe in fright
+                this.tweens.add({ targets: this.hero, x: CANOE_X, duration: 700, delay: 200, ease: "Sine.easeInOut" });
+                this.tweens.add({
+                    targets: this.hero,
+                    y: SWIM_Y - 110,
+                    duration: 350,
+                    delay: 200,
+                    ease: "Quad.easeOut",
+                    yoyo: false,
+                    onComplete: () => {
+                        this.tweens.add({ targets: this.hero, y: SWIM_Y - 46, duration: 350, ease: "Bounce.easeOut" });
+                    },
+                });
+                // The croc swims off with its prize
+                this.tweens.add({ targets: this.croc, x: -200, y: SWIM_Y + 4, duration: 2200, delay: 600, ease: "Sine.easeIn" });
+            },
+        });
+    }
+
+    private startRescue() {
+        if (this.finished || this.rope) return;
+        const boat = this.add.container(this.scale.width + 80, 150);
+        const g = this.add.graphics();
+        g.fillStyle(0x6d4c1d, 1);
+        g.beginPath();
+        g.moveTo(-40, 0);
+        g.lineTo(40, 0);
+        g.lineTo(30, 12);
+        g.lineTo(-30, 12);
+        g.closePath();
+        g.fillPath();
+        boat.add(g);
+        // Fisherman
+        boat.add(this.add.rectangle(0, -10, 12, 18, 0xfcd116));
+        boat.add(this.add.circle(0, -24, 7, 0x6d4c3c));
+        boat.add(this.add.triangle(0, -32, -10, 4, 0, -6, 10, 4, 0xce1126));
+        this.fisherBoat = boat;
+        this.rope = this.add.graphics();
+
+        this.tweens.add({ targets: boat, x: this.hero.x + 90, duration: 900, ease: "Sine.easeOut" });
+        this.showLabel("A ROPE! GET THIS ONE RIGHT!", "#ffeb3b");
+    }
+
+    private endRescue() {
+        if (!this.rope) return;
+        const boat = this.fisherBoat;
+        this.rope.destroy();
+        this.rope = undefined;
+        this.fisherBoat = undefined;
+        if (boat) {
+            this.tweens.add({ targets: boat, x: this.scale.width + 120, duration: 1200, onComplete: () => boat.destroy() });
+        }
+    }
+
+    private escape() {
+        this.busy = true;
+        this.finished = true;
+        this.danger = 0;
+        this.swimTo(SHORE_X + 30, 700);
+        this.time.delayedCall(700, () => {
+            // Climb onto the beach and celebrate
             this.tweens.add({
-                targets: this.heroContainer,
-                y: this.heroContainer.y + 20,
-                duration: 150,
-                yoyo: true,
-                repeat: 1,
-                ease: "Sine.easeInOut",
+                targets: this.hero,
+                x: SHORE_X + 60,
+                y: 150,
+                duration: 500,
+                ease: "Quad.easeOut",
+                onComplete: () => {
+                    this.showLabel("SAFE! YOU ESCAPED!", "#69f0ae");
+                    this.spawnSparkles(this.hero.x, this.hero.y - 20);
+                    this.tweens.add({ targets: this.hero, y: 135, duration: 260, yoyo: true, repeat: 3, ease: "Quad.easeOut" });
+                    this.heroArms.forEach((a, i) => a.setAngle(i === 0 ? 160 : -160));
+                },
             });
+            // The croc snaps at nothing, then sinks away sulking
+            this.openJaws(true);
             this.tweens.add({
-                targets: this.heroContainer,
-                angle: -10,
-                yoyo: true,
-                duration: 100,
-                repeat: 2,
-                onComplete: () => this.heroContainer.setAngle(0),
+                targets: this.croc,
+                x: SHORE_X - 90,
+                duration: 500,
+                onComplete: () => {
+                    this.openJaws(false);
+                    playChompSFX();
+                    this.tweens.add({ targets: this.croc, x: SHORE_X - 260, alpha: 0.2, duration: 1600, delay: 300 });
+                },
             });
+        });
+    }
 
-            this.spawnSplash(this.heroContainer.x, this.heroContainer.y + 30);
+    private openJaws(open: boolean) {
+        this.tweens.add({ targets: this.crocJawTop, angle: open ? -32 : 0, duration: open ? 160 : 70 });
+        this.tweens.add({ targets: this.crocJawBottom, angle: open ? 18 : 0, duration: open ? 160 : 70 });
+    }
 
-            // Croc lunges toward hero
-            const heroX = this.heroContainer.x;
+    private showLabel(text: string, color: string) {
+        this.tweens.killTweensOf(this.label);
+        this.label.setText(text).setColor(color).setScale(0.4).setAlpha(1);
+        this.tweens.add({ targets: this.label, scale: 1, duration: 260, ease: "Back.easeOut" });
+        this.tweens.add({ targets: this.label, alpha: 0, duration: 400, delay: 1100 });
+    }
+
+    // ---------- Effects ----------
+
+    private spawnSplash(x: number, y: number, count: number) {
+        for (let i = 0; i < count; i++) {
+            const drop = this.add.circle(x, y, 2 + Math.random() * 3, 0xb3e5fc, 0.85).setDepth(30);
+            const a = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI;
+            const d = 15 + Math.random() * 35;
             this.tweens.add({
-                targets: this.crocContainer,
-                x: heroX - 70 + this.wrongCount * 20,
-                duration: 600,
+                targets: drop,
+                x: x + Math.cos(a) * d,
+                y: y + Math.sin(a) * d,
+                alpha: 0,
+                duration: 450 + Math.random() * 250,
                 ease: "Sine.easeOut",
-            });
-
-            // Open mouth
-            this.crocMouthParts.forEach((p) => (p as any).setVisible(true));
-            this.time.delayedCall(600, () => {
-                this.crocMouthParts.forEach((p) => (p as any).setVisible(false));
-            });
-
-            // Croc pulsing bigger
-            this.tweens.add({
-                targets: this.crocContainer,
-                scaleX: 1.15,
-                scaleY: 1.15,
-                yoyo: true,
-                duration: 150,
-                repeat: 2,
+                onComplete: () => drop.destroy(),
             });
         }
+    }
+
+    private spawnBubbles(x: number, y: number) {
+        const b = this.add.circle(x, y + 10, 3 + Math.random() * 4).setStrokeStyle(1.5, 0xb3e5fc, 0.8);
+        this.tweens.add({ targets: b, y: y - 10, alpha: 0, duration: 700, onComplete: () => b.destroy() });
     }
 
     private spawnSparkles(x: number, y: number) {
-        const colors = [0xffeb3b, 0xfff176, 0xffd54f, 0xffe082, 0xffffff];
-        for (let i = 0; i < 10; i++) {
-            const col = colors[Math.floor(Math.random() * colors.length)];
-            const s = this.add.star(x, y, 4, 2, 5, col);
-            const angle = Math.random() * Math.PI * 2;
-            const dist = 20 + Math.random() * 30;
+        const colors = [0xffeb3b, 0x69f0ae, 0xffffff, 0xff8a65];
+        for (let i = 0; i < 18; i++) {
+            const s = this.add.star(x, y, 4, 2, 5, colors[i % colors.length]).setDepth(30);
+            const a = Math.random() * Math.PI * 2;
+            const d = 25 + Math.random() * 40;
             this.tweens.add({
                 targets: s,
-                x: x + Math.cos(angle) * dist,
-                y: y + Math.sin(angle) * dist - 15,
+                x: x + Math.cos(a) * d,
+                y: y + Math.sin(a) * d - 15,
                 alpha: 0,
-                scaleX: 0.3,
-                scaleY: 0.3,
-                duration: 500 + Math.random() * 300,
-                ease: "Sine.easeOut",
+                duration: 700 + Math.random() * 300,
                 onComplete: () => s.destroy(),
             });
         }
     }
 
-    private spawnSplash(x: number, y: number) {
-        for (let i = 0; i < 12; i++) {
-            const r = 2 + Math.random() * 3;
-            const drop = this.add.circle(x, y, r, 0x90caf9, 0.8);
-            const angle = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI;
-            const dist = 15 + Math.random() * 25;
-            this.tweens.add({
-                targets: drop,
-                x: x + Math.cos(angle) * dist,
-                y: y + Math.sin(angle) * dist,
-                alpha: 0,
-                duration: 400 + Math.random() * 200,
-                ease: "Sine.easeOut",
-                onComplete: () => drop.destroy(),
-            });
-        }
-
-        const ring = this.add.circle(x, y, 5);
-        ring.setStrokeStyle(2, 0xbbdefb, 0.7);
-        ring.setFillStyle(0, 0);
-        this.tweens.add({
-            targets: ring,
-            scaleX: 3,
-            scaleY: 3,
-            alpha: 0,
-            duration: 500,
-            ease: "Sine.easeOut",
-            onComplete: () => ring.destroy(),
-        });
+    private lightning() {
+        // One soft flash (no strobing), and none at all with reduced motion
+        if (this.reducedMotion) return;
+        this.flash.setAlpha(0.3);
+        this.tweens.add({ targets: this.flash, alpha: 0, duration: 450 });
+        this.time.delayedCall(400, () => playThunderSFX());
     }
 
-    update(_time: number, delta: number) {
+    private shake(duration: number, intensity: number) {
+        if (!this.reducedMotion) this.cameras.main.shake(duration, intensity);
+    }
+
+    update(time: number, delta: number) {
         const W = this.scale.width;
+        const H = this.scale.height;
+        const dt = delta / 1000;
 
-        this.ripples.forEach((r) => {
-            const d = (r as any)._dir as number;
-            const spd = (r as any)._speed as number;
-            r.x += d * spd * (delta / 1000);
-            if (r.x > W + 50) r.x = -50;
-            else if (r.x < -50) r.x = W + 50;
+        this.waves.forEach((w) => {
+            w.x -= (w as any)._speed * dt;
+            if (w.x < -60) w.x = W + 60;
+        });
+        this.rain.forEach((r) => {
+            r.y += (r as any)._speed * dt;
+            r.x -= 60 * dt;
+            if (r.y > H) {
+                r.y = -12;
+                r.x = Math.random() * (W + 60);
+            }
         });
 
-        this.clouds.forEach((c, i) => {
-            c.x += (8 + i * 2) * (delta / 1000);
-            if (c.x > W + 80) c.x = -80;
-        });
+        if (time > this.nextLightning) {
+            this.lightning();
+            this.nextLightning = time + 7000 + Math.random() * 9000;
+        }
+
+        if (!this.hero || !this.croc) return;
+
+        // Paddling arms + bob
+        if (!this.finished) {
+            this.armPhase += dt * (2 + this.danger * 4);
+            this.heroArms[0].setAngle(Math.sin(this.armPhase) * 40 - 20);
+            this.heroArms[1].setAngle(-Math.sin(this.armPhase) * 40 + 20);
+            if (!this.busy) this.hero.y = SWIM_Y + Math.sin(time / 300) * 2;
+        }
+
+        // The croc stalks the hero: closer with fewer lives and as the clock runs down
+        if (!this.busy && !this.finished) {
+            const gap = CROC_GAP_BY_LIVES[Phaser.Math.Clamp(this.livesLeft, 1, 3)];
+            const creep = Math.max(0, (this.danger - READING_GRACE) / (1 - READING_GRACE));
+            const target = this.hero.x - gap * (1 - 0.3 * creep) - this.crocPushback;
+            this.croc.x += (target - this.croc.x) * Math.min(1, dt * 2.5);
+            this.croc.y = SWIM_Y + 4 + Math.sin(time / 500) * 2;
+        }
+
+        // Wake trailing behind the croc
+        this.crocWake.clear();
+        this.crocWake.lineStyle(2, 0x9ec9d6, 0.3);
+        this.crocWake.lineBetween(-10, 0, -120, -16);
+        this.crocWake.lineBetween(-10, 6, -120, 22);
+
+        if (this.rope && this.fisherBoat) {
+            this.rope.clear();
+            this.rope.lineStyle(2, 0xd7ccc8, 1);
+            this.rope.lineBetween(this.fisherBoat.x - 6, this.fisherBoat.y - 14, this.hero.x + 12, this.hero.y - 8);
+        }
+
+        // Proximity drives the red pulse and the heartbeat
+        const dist = this.hero.x - this.croc.x;
+        const threat = this.finished ? 0 : Phaser.Math.Clamp((290 - dist) / 180, 0, 1);
+        const pulse = this.reducedMotion ? 0 : 0.06 * Math.sin(time / 250);
+        this.dangerOverlay.setAlpha(threat * (0.16 + pulse));
+        if (threat > 0.35 && time > this.nextHeartbeat) {
+            playHeartbeatSFX();
+            this.nextHeartbeat = time + 1000 - threat * 550;
+        }
     }
 }

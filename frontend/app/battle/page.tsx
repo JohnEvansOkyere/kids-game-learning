@@ -14,6 +14,9 @@ import {
     stopBackgroundMusic,
 } from "@/app/practice/GameAudio";
 import NodeResult from "@/components/world/NodeResult";
+import RewardBurst from "@/components/world/RewardBurst";
+import { GameTopBar } from "@/components/games/GameScreen";
+import { CheckIcon, ChevronLeftIcon } from "@/components/ui/Icons";
 import { findNode, getNodeIdFromUrl, loadWorld } from "@/lib/world";
 import { cacheQuestions, pickCachedQuestions } from "@/lib/questionCache";
 import { recordOfflineAnswer, startOfflineSession } from "@/lib/offlineAnswers";
@@ -192,6 +195,7 @@ function TugOfWarScene({
                 </linearGradient>
             </defs>
             <rect x={0} y={0} width={500} height={160} fill="url(#skyBg)" />
+            <image href="/zones/village.webp" x={0} y={0} width={500} height={150} preserveAspectRatio="xMidYMid slice" opacity={0.34} />
 
             {/* Ground */}
             <rect x={0} y={baseY + 4} width={500} height={16} fill="#4CAF50" rx={2} />
@@ -252,27 +256,29 @@ function NumPad({
     onClear: () => void;
     onSubmit: () => void;
 }) {
-    const btnBase =
-        "h-12 sm:h-14 md:h-16 rounded-xl font-bold text-lg md:text-xl lg:text-2xl transition-colors active:scale-95 disabled:opacity-40 select-none";
+    // The shared 3D key, squeezed to fit a narrow panel. The bottom margin
+    // leaves room for the key's "ledge" shadow so rows never touch.
+    const btnBase = "!min-h-0 !px-0 mb-1 h-12 sm:h-14 md:h-16 !text-xl md:!text-2xl lg:!text-3xl";
 
     return (
-        <div className="grid grid-cols-3 gap-1.5 sm:gap-2 md:gap-2.5">
+        <div className="grid grid-cols-3 gap-x-2 gap-y-1.5 sm:gap-x-2.5">
             {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
                 <button
                     key={n}
                     type="button"
                     disabled={disabled}
                     onClick={() => onDigit(n)}
-                    className={`${btnBase} bg-gray-700 hover:bg-gray-600 text-white`}
+                    className={`btn ${btnBase}`}
                 >
                     {n}
                 </button>
             ))}
             <button
                 type="button"
+                aria-label="Clear"
                 disabled={disabled}
                 onClick={onClear}
-                className={`${btnBase} bg-red-600 hover:bg-red-500 text-white`}
+                className={`btn-danger ${btnBase}`}
             >
                 ✕
             </button>
@@ -280,15 +286,16 @@ function NumPad({
                 type="button"
                 disabled={disabled}
                 onClick={() => onDigit(0)}
-                className={`${btnBase} bg-gray-700 hover:bg-gray-600 text-white`}
+                className={`btn ${btnBase}`}
             >
                 0
             </button>
             <button
                 type="button"
+                aria-label="Submit answer"
                 disabled={disabled}
                 onClick={onSubmit}
-                className={`${btnBase} bg-blue-600 hover:bg-blue-500 text-white`}
+                className={`btn-success ${btnBase}`}
             >
                 ✔
             </button>
@@ -311,8 +318,14 @@ function TeamPanel({
     onClear,
     onSubmit,
     label,
+    stacked = false,
+    className = "",
 }: {
     label?: string;
+    // On a phone the panel gets the full width (boss mode): bigger question,
+    // and no header, because the scoreboard above already shows name and score
+    stacked?: boolean;
+    className?: string;
     team: 1 | 2;
     score: number;
     question: Question | undefined;
@@ -324,47 +337,47 @@ function TeamPanel({
     onSubmit: () => void;
 }) {
     const isT1 = team === 1;
-    const headerBg = isT1 ? "bg-blue-700" : "bg-red-700";
-    const borderClr = isT1 ? "border-blue-500/60" : "border-red-500/60";
-    const qColor = isT1 ? "text-blue-300" : "text-red-300";
+    // Team 1 is the brand indigo, team 2 the warm coral: same colours as the rest of the app
+    const headerBg = isT1 ? "bg-gradient-to-b from-primary-light to-primary" : "bg-gradient-to-b from-danger-light to-danger";
+    const ringClr = isT1 ? "ring-primary-light/50" : "ring-danger-light/50";
 
-    let answerBorder = "border-gray-600";
-    let answerBg = "bg-gray-800";
+    let answerRing = "ring-white/15";
+    let answerBg = "bg-night-deep/70";
     if (flash === "correct") {
-        answerBorder = "border-green-400";
-        answerBg = "bg-green-900/40";
+        answerRing = "ring-success-light";
+        answerBg = "bg-success/25";
     } else if (flash === "wrong") {
-        answerBorder = "border-red-400";
-        answerBg = "bg-red-900/40";
+        answerRing = "ring-danger-light";
+        answerBg = "bg-danger/25";
     }
 
     return (
         <div
-            className={`rounded-2xl border-2 ${borderClr} overflow-hidden bg-gray-900/80 min-w-0 flex flex-col h-full`}
+            className={`rounded-3xl ring-2 ${ringClr} overflow-hidden bg-night-light/60 min-w-0 flex flex-col h-full ${className}`}
         >
             {/* Coloured header */}
             <div
-                className={`${headerBg} px-3 py-2 sm:px-4 sm:py-3 flex items-center justify-between flex-shrink-0`}
+                className={`${headerBg} px-3 py-2 sm:px-4 sm:py-3 items-center justify-between flex-shrink-0 ${stacked ? "hidden sm:flex" : "flex"}`}
             >
-                <span className="text-white font-bold text-lg sm:text-xl md:text-2xl truncate">
+                <span className="font-display font-semibold text-white text-lg sm:text-xl md:text-2xl truncate">
                     {label ?? `Team ${team}`}
                 </span>
-                <span className="bg-white/20 backdrop-blur text-white font-bold rounded-full w-9 h-9 sm:w-10 sm:h-10 md:w-12 md:h-12 flex items-center justify-center text-lg sm:text-xl md:text-2xl">
+                <span className="bg-white/25 text-white font-display font-semibold rounded-full w-9 h-9 sm:w-10 sm:h-10 md:w-12 md:h-12 flex items-center justify-center text-lg sm:text-xl md:text-2xl">
                     {score}
                 </span>
             </div>
 
-            <div className="p-3 sm:p-4 pb-6 sm:pb-8 md:pb-10 flex-1 flex flex-col min-h-0">
+            <div className="p-3 sm:p-4 pb-5 sm:pb-7 md:pb-9 flex-1 flex flex-col min-h-0">
                 {/* Question */}
                 <div
-                    className={`${qColor} text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-center mb-2 sm:mb-3 min-h-[44px] sm:min-h-[52px] md:min-h-[64px] flex items-center justify-center leading-tight flex-shrink-0`}
+                    className={`text-white font-display font-semibold ${stacked ? "text-3xl" : "text-base"} sm:text-lg md:text-xl lg:text-3xl text-center mb-2 sm:mb-3 min-h-[44px] sm:min-h-[52px] md:min-h-[64px] flex items-center justify-center leading-tight flex-shrink-0`}
                 >
                     {question?.questionText || "..."}
                 </div>
 
                 {/* Answer display */}
                 <div
-                    className={`w-full h-12 sm:h-14 md:h-16 rounded-xl border-2 ${answerBorder} ${answerBg} flex items-center justify-end px-4 text-xl sm:text-2xl md:text-3xl font-bold mb-2 sm:mb-3 transition-colors flex-shrink-0 ${answer ? "text-white" : "text-gray-500"}`}
+                    className={`w-full ${stacked ? "h-14" : "h-12"} sm:h-14 md:h-16 rounded-2xl ring-2 ${answerRing} ${answerBg} flex items-center justify-end px-4 font-display text-xl sm:text-2xl md:text-3xl font-semibold mb-2 sm:mb-3 transition-colors flex-shrink-0 ${answer ? "text-white" : "text-white/35"} ${flash === "wrong" ? "animate-shake" : ""}`}
                 >
                     {answer || "0"}
                 </div>
@@ -384,19 +397,33 @@ function TeamPanel({
 }
 
 /* Computer opponent shown in place of Team 2 in boss mode */
-function BossPanel({ boss, score, gameOver }: { boss: WorldNode; score: number; gameOver: boolean }) {
+function BossPanel({
+    boss,
+    score,
+    gameOver,
+    className = "",
+}: {
+    boss: WorldNode;
+    score: number;
+    gameOver: boolean;
+    className?: string;
+}) {
     return (
-        <div className="rounded-2xl border-2 border-red-500/60 overflow-hidden bg-gray-900/80 min-w-0 flex flex-col h-full">
-            <div className="bg-red-700 px-3 py-2 sm:px-4 sm:py-3 flex items-center justify-between flex-shrink-0">
-                <span className="text-white font-bold text-lg sm:text-xl md:text-2xl truncate">BOSS</span>
-                <span className="bg-white/20 backdrop-blur text-white font-bold rounded-full w-9 h-9 sm:w-10 sm:h-10 md:w-12 md:h-12 flex items-center justify-center text-lg sm:text-xl md:text-2xl">
+        <div className={`rounded-3xl ring-2 ring-danger-light/50 overflow-hidden bg-night-light/60 min-w-0 flex flex-col h-full ${className}`}>
+            <div className="bg-gradient-to-b from-danger-light to-danger px-3 py-2 sm:px-4 sm:py-3 flex items-center justify-between flex-shrink-0">
+                {/* Phone: one slim strip with the boss's face. Tablet and up: the big panel below. */}
+                <span className="font-display font-semibold text-white text-lg sm:hidden truncate">
+                    <span className={`inline-block ${gameOver ? "" : "animate-float"}`}>{boss.emoji}</span> {boss.title}
+                </span>
+                <span className="hidden sm:inline font-display font-semibold text-white text-xl md:text-2xl truncate">BOSS</span>
+                <span className="bg-white/25 text-white font-display font-semibold rounded-full w-9 h-9 sm:w-10 sm:h-10 md:w-12 md:h-12 flex items-center justify-center text-lg sm:text-xl md:text-2xl">
                     {score}
                 </span>
             </div>
-            <div className="flex-1 flex flex-col items-center justify-center p-4 text-center">
-                <span className={`text-6xl sm:text-7xl md:text-8xl ${gameOver ? "" : "animate-bounce"}`}>{boss.emoji}</span>
-                <p className="text-red-300 font-bold text-lg sm:text-xl md:text-2xl mt-3">{boss.title}</p>
-                {!gameOver && <p className="text-gray-400 mt-2 animate-pulse">is pulling the rope...</p>}
+            <div className="hidden sm:flex flex-1 flex-col items-center justify-center p-4 text-center">
+                <span className={`text-6xl sm:text-7xl md:text-8xl ${gameOver ? "" : "animate-float"}`}>{boss.emoji}</span>
+                <p className="text-white font-display font-semibold text-lg sm:text-xl md:text-2xl mt-3">{boss.title}</p>
+                {!gameOver && <p className="text-white/60 mt-2 animate-pulse">is pulling the rope...</p>}
             </div>
         </div>
     );
@@ -679,8 +706,8 @@ export default function BattlePage() {
     /* ─── Loading guard ─── */
     if (!student) {
         return (
-            <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-                <p className="text-2xl text-gray-400">Loading...</p>
+            <div className="min-h-screen bg-background flex items-center justify-center">
+                <p className="font-display text-2xl font-semibold text-ink-muted">Loading...</p>
             </div>
         );
     }
@@ -692,32 +719,47 @@ export default function BattlePage() {
         return (
             <div className="min-h-screen bg-background">
                 <Header />
-                <div className="container mx-auto px-4 py-8 max-w-2xl text-center">
+                <div className="container mx-auto px-4 py-6 max-w-2xl">
+                    <GameTopBar onBack={() => router.push("/play")} />
                     {error && (
-                        <div className="bg-danger/10 border-4 border-danger rounded-2xl p-4 mb-6">
-                            <p className="text-danger font-bold">{error}</p>
+                        <div className="mb-6 rounded-2xl bg-danger/10 p-4 ring-1 ring-danger/30">
+                            <p className="text-center font-semibold text-danger-dark">{error}</p>
                         </div>
                     )}
                     {boss ? (
-                        <Card colorful className="p-8 mb-6">
-                            <p className="text-8xl mb-4 animate-bounce">{boss.emoji}</p>
-                            <h1 className="text-4xl font-bold text-primary mb-2">{boss.title}</h1>
-                            <p className="text-xl text-gray-700 mb-2">
+                        <div className="card relative isolate mx-auto mb-6 max-w-md overflow-hidden text-center !p-7 sm:!p-9">
+                            {/* A red glow behind the boss so the card reads as "a challenge" */}
+                            <div
+                                aria-hidden
+                                className="absolute inset-x-0 top-0 -z-10 h-44 bg-gradient-to-b from-danger/20 to-transparent"
+                            />
+                            <p className="mb-1 font-display text-sm font-semibold uppercase tracking-widest text-danger-dark">
+                                Boss battle
+                            </p>
+                            <div className="mx-auto mb-4 flex h-28 w-28 items-center justify-center rounded-full bg-danger/15 text-7xl ring-4 ring-white">
+                                <span className="animate-float">{boss.emoji}</span>
+                            </div>
+                            <h1 className="font-display text-3xl font-semibold text-ink sm:text-4xl">{boss.title}</h1>
+                            <p className="mt-2 text-lg text-ink-soft">
                                 Answer quickly to pull the rope, {student.name}!
                             </p>
-                            <p className="text-lg text-gray-600">
+                            <p className="mt-1 text-base text-ink-muted">
                                 Get {WIN_LEAD} pulls ahead before {boss.title} does to win.
                             </p>
-                        </Card>
+                        </div>
                     ) : (
-                        !error && <p className="text-2xl text-gray-600 py-12">Getting ready...</p>
+                        !error && (
+                            <p className="py-12 text-center font-display text-2xl font-semibold text-ink-muted">
+                                Getting ready...
+                            </p>
+                        )
                     )}
-                    <div className="flex gap-4 justify-center">
-                        <Button variant="secondary" onClick={() => router.push("/play")}>
-                            🗺️ Map
+                    <div className="mx-auto flex max-w-md flex-col gap-3">
+                        <Button variant="danger" fullWidth onClick={startBattle} disabled={!boss || loading}>
+                            {loading ? "Loading..." : "⚔️ Start battle"}
                         </Button>
-                        <Button variant="primary" onClick={startBattle} disabled={!boss || loading}>
-                            {loading ? "Loading..." : "⚔️ Start Battle"}
+                        <Button variant="neutral" fullWidth onClick={() => router.push("/play")}>
+                            Back to map
                         </Button>
                     </div>
                 </div>
@@ -732,65 +774,69 @@ export default function BattlePage() {
         return (
             <div className="min-h-screen bg-background">
                 <Header />
-                <div className="container mx-auto px-4 py-8 max-w-2xl">
-                    <div className="text-center mb-8">
-                        <h1 className="text-4xl font-bold text-primary mb-2">
-                            ⚔️ Tug of War Battle
+                <div className="container mx-auto px-4 py-6 max-w-2xl">
+                    <GameTopBar onBack={() => router.push("/dashboard")} />
+
+                    <div className="text-center mb-6">
+                        <h1 className="font-display text-4xl font-semibold text-ink mb-2">
+                            ⚔️ Tug of War
                         </h1>
-                        <p className="text-xl text-gray-600">
+                        <p className="text-lg text-ink-soft">
                             Two teams pull the rope! Answer correctly to pull.
                             First team to drag the rope fully to their side wins!
                         </p>
                     </div>
 
                     {error && (
-                        <div className="bg-danger/10 border-4 border-danger rounded-2xl p-4 mb-6">
-                            <p className="text-danger font-bold text-center">
+                        <div className="mb-6 rounded-2xl bg-danger/10 p-4 ring-1 ring-danger/30">
+                            <p className="text-center font-semibold text-danger-dark">
                                 {error}
                             </p>
                         </div>
                     )}
 
-                    <Card colorful className="p-6 mb-6">
-                        <h2 className="text-2xl font-bold text-primary mb-4">
-                            Choose topic
+                    <Card colorful className="mb-6 !p-5 sm:!p-6">
+                        <h2 className="mb-4 font-display text-2xl font-semibold text-ink">
+                            Choose a topic
                         </h2>
-                        <div className="grid grid-cols-2 gap-4">
-                            {TOPICS.map((t) => (
-                                <button
-                                    key={t.id}
-                                    type="button"
-                                    onClick={() => setTopic(t.id)}
-                                    className={`p-4 rounded-2xl border-4 text-left transition-all ${
-                                        topic === t.id
-                                            ? "border-primary bg-primary/20"
-                                            : "border-gray-300 hover:border-primary/50"
-                                    }`}
-                                >
-                                    <span className="text-3xl">{t.icon}</span>
-                                    <span className="block font-bold text-lg mt-2">
-                                        {t.label}
-                                    </span>
-                                </button>
-                            ))}
+                        <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                            {TOPICS.map((t) => {
+                                const selected = topic === t.id;
+                                return (
+                                    <button
+                                        key={t.id}
+                                        type="button"
+                                        aria-pressed={selected}
+                                        onClick={() => setTopic(t.id)}
+                                        className={`relative flex min-h-[96px] flex-col items-start justify-center rounded-2xl p-4 text-left transition-all active:scale-[0.98] ${
+                                            selected
+                                                ? "bg-primary/10 ring-[3px] ring-primary shadow-lift"
+                                                : "bg-white ring-2 ring-ink/10 hover:ring-primary/40"
+                                        }`}
+                                    >
+                                        <span className="text-4xl leading-none">{t.icon}</span>
+                                        <span className="mt-2 font-display text-lg font-semibold text-ink">
+                                            {t.label}
+                                        </span>
+                                        {selected && (
+                                            <span className="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-white">
+                                                <CheckIcon size={14} />
+                                            </span>
+                                        )}
+                                    </button>
+                                );
+                            })}
                         </div>
                     </Card>
 
-                    <div className="flex gap-4 justify-center">
-                        <Button
-                            variant="secondary"
-                            onClick={() => router.push("/dashboard")}
-                        >
-                            ← Back
-                        </Button>
-                        <Button
-                            variant="primary"
-                            onClick={startBattle}
-                            disabled={!topic || loading}
-                        >
-                            {loading ? "Loading..." : "Start Battle"}
-                        </Button>
-                    </div>
+                    <Button
+                        variant="danger"
+                        fullWidth
+                        onClick={startBattle}
+                        disabled={!topic || loading}
+                    >
+                        {loading ? "Loading..." : "⚔️ Start battle"}
+                    </Button>
                 </div>
             </div>
         );
@@ -801,28 +847,33 @@ export default function BattlePage() {
        ═══════════════════════════ */
     if (step === "result") {
         return (
-            <div className="min-h-screen bg-gray-950">
+            <div className="min-h-screen bg-background">
                 <Header />
-                <div className="container mx-auto px-4 py-8 max-w-3xl text-center">
-                    <h2 className="text-4xl font-bold text-white mb-2">
-                        {boss ? (
-                            winner === 1 ? `You beat ${boss.title}! 🎉` : `${boss.title} wins this time!`
-                        ) : (
-                            <>
-                                {winner === 1 && "Team 1 Wins! 🎉"}
-                                {winner === 2 && "Team 2 Wins! 🎉"}
-                                {winner === null && "It's a Tie! 🤝"}
-                            </>
-                        )}
-                    </h2>
-                    <p className="text-2xl text-gray-300 mb-2">
-                        {scoreP1} – {scoreP2}
-                    </p>
-                    <p className="text-gray-500 mb-6">
-                        Time: {formatTime(timer)}
-                    </p>
+                <div className="container mx-auto px-4 py-6 max-w-2xl text-center">
+                    {/* isolate: the celebration sits behind the text but above the card's white */}
+                    <div className="card relative isolate mb-5 overflow-hidden !p-6 sm:!p-8">
+                        {winner !== null && (!boss || winner === 1) && <RewardBurst className="-z-10" />}
+                        <h2 className="font-display text-3xl font-semibold text-ink sm:text-4xl">
+                            {boss ? (
+                                winner === 1 ? `You beat ${boss.title}! 🎉` : `${boss.title} wins this time!`
+                            ) : (
+                                <>
+                                    {winner === 1 && "Team 1 Wins! 🎉"}
+                                    {winner === 2 && "Team 2 Wins! 🎉"}
+                                    {winner === null && "It's a Tie! 🤝"}
+                                </>
+                            )}
+                        </h2>
+                        <p className="mt-2 font-display text-5xl font-semibold leading-none text-primary">
+                            {scoreP1} – {scoreP2}
+                        </p>
+                        <p className="mt-2 text-sm font-bold uppercase tracking-wider text-ink-muted">
+                            Time {formatTime(timer)}
+                        </p>
+                    </div>
 
-                    <div className="max-w-lg mx-auto mb-8">
+                    {/* The scene was drawn for a dark backdrop */}
+                    <div className="mx-auto mb-6 max-w-lg rounded-4xl bg-night p-3 shadow-card ring-4 ring-white">
                         <TugOfWarScene
                             scoreP1={scoreP1}
                             scoreP2={scoreP2}
@@ -830,7 +881,7 @@ export default function BattlePage() {
                     </div>
 
                     {boss ? (
-                        <div className="bg-background rounded-3xl p-6">
+                        <div className="card !p-6">
                             <NodeResult
                                 studentId={student.id}
                                 nodeId={boss.id}
@@ -841,23 +892,25 @@ export default function BattlePage() {
                             />
                         </div>
                     ) : (
-                    <div className="flex gap-4 justify-center">
-                        <Button
-                            variant="primary"
-                            onClick={() => {
-                                setStep("setup");
-                                setTopic(null);
-                            }}
-                        >
-                            Play Again
-                        </Button>
-                        <Button
-                            variant="secondary"
-                            onClick={() => router.push("/dashboard")}
-                        >
-                            Dashboard
-                        </Button>
-                    </div>
+                        <div className="mx-auto flex max-w-sm flex-col gap-3">
+                            <Button
+                                variant="success"
+                                fullWidth
+                                onClick={() => {
+                                    setStep("setup");
+                                    setTopic(null);
+                                }}
+                            >
+                                Play again
+                            </Button>
+                            <Button
+                                variant="neutral"
+                                fullWidth
+                                onClick={() => router.push("/dashboard")}
+                            >
+                                Free play
+                            </Button>
+                        </div>
                     )}
                 </div>
             </div>
@@ -868,39 +921,58 @@ export default function BattlePage() {
        PLAY SCREEN  (3-column, full viewport)
        ═══════════════════════════ */
     return (
-        <div className="min-h-screen h-screen flex flex-col bg-gradient-to-b from-gray-900 via-gray-900 to-gray-950 overflow-hidden">
+        // Boss battle on a phone stacks vertically and the page may scroll; everything
+        // else (tablet and up, and two-player mode) fills the viewport as before
+        <div
+            className={`flex flex-col bg-gradient-to-b from-night via-night to-night-deep ${
+                boss ? "min-h-screen sm:h-screen sm:overflow-hidden" : "min-h-screen h-screen overflow-hidden"
+            }`}
+        >
             {/* Top bar — full width */}
             <div className="flex items-center justify-between px-4 sm:px-6 lg:px-8 py-2 sm:py-3 flex-shrink-0">
                 <button
+                    type="button"
+                    aria-label="Back"
                     onClick={() => {
                         if (!confirm("Leave battle?")) return;
                         if (boss) router.push("/play");
                         else setStep("setup");
                     }}
-                    className="text-gray-400 hover:text-white font-bold text-sm sm:text-base"
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/10 text-white ring-1 ring-white/15 active:scale-95"
                 >
-                    ← Back
+                    <ChevronLeftIcon size={22} />
                 </button>
-                <h1 className="text-white font-bold text-base sm:text-lg md:text-xl lg:text-2xl tracking-wide text-center truncate mx-2">
-                    TUG OF WAR: MATHEMATICS
+                <h1 className="text-white font-display font-semibold text-base sm:text-lg md:text-xl lg:text-2xl tracking-wide text-center truncate mx-2">
+                    Tug of War
                 </h1>
-                <span className="text-gray-400 text-sm font-mono whitespace-nowrap">
+                <span className="rounded-full bg-white/10 px-3 py-1 font-display text-sm font-semibold text-white/80 ring-1 ring-white/15 whitespace-nowrap">
                     ⏱ {formatTime(timer)}
                 </span>
             </div>
 
             {/* Win banner */}
             {winBanner && (
-                <div className="text-center py-2 sm:py-3 px-4 flex-shrink-0 animate-pulse bg-yellow-500/20 border-y-2 border-yellow-400/50">
-                    <p className="text-yellow-300 text-lg sm:text-xl md:text-2xl font-bold">{winBanner}</p>
+                <div className="text-center py-2 sm:py-3 px-4 flex-shrink-0 animate-pulse bg-secondary/20 border-y-2 border-secondary/50">
+                    <p className="font-display text-secondary-light text-lg sm:text-xl md:text-2xl font-semibold">{winBanner}</p>
                 </div>
             )}
 
             {/* Main area — fills remaining space, full width */}
-            <div className="flex-1 min-h-0 w-full px-3 sm:px-4 md:px-6 lg:px-8 pb-4 flex flex-col">
-                <div className="grid grid-cols-[1fr_1.1fr_1fr] lg:grid-cols-[1fr_1.3fr_1fr] gap-3 sm:gap-4 md:gap-6 flex-1 min-h-0 items-stretch max-w-[1920px] mx-auto w-full">
-                    {/* ── Team 1 panel ── */}
+            <div className={`flex-1 ${boss ? "sm:min-h-0" : "min-h-0"} w-full px-3 sm:px-4 md:px-6 lg:px-8 pb-4 flex flex-col`}>
+                <div
+                    className={`grid ${
+                        // Phone boss layout: slim boss strip, scene, then the keypad takes the spare height
+                        boss
+                            ? "grid-cols-1 grid-rows-[auto_auto_1fr] sm:grid-cols-[1fr_1.1fr_1fr] sm:grid-rows-none"
+                            : "grid-cols-[1fr_1.1fr_1fr]"
+                    } lg:grid-cols-[1fr_1.3fr_1fr] gap-3 sm:gap-4 md:gap-6 flex-1 ${
+                        boss ? "sm:min-h-0" : "min-h-0"
+                    } items-stretch max-w-[1920px] mx-auto w-full`}
+                >
+                    {/* ── Team 1 panel ── (last on a phone in boss mode, so the keypad sits under the thumb) */}
                     <TeamPanel
+                        stacked={!!boss}
+                        className={boss ? "order-3 sm:order-none" : ""}
                         team={1}
                         label={boss ? student.name : undefined}
                         score={scoreP1}
@@ -914,22 +986,22 @@ export default function BattlePage() {
                     />
 
                     {/* ── Center: scoreboard + illustration ── */}
-                    <div className="flex flex-col items-center justify-center min-h-0 flex-1">
+                    <div className={`flex flex-col items-center justify-center min-h-0 flex-1 ${boss ? "order-2 sm:order-none" : ""}`}>
                         {/* Scoreboard */}
                         <div className="flex items-center gap-3 sm:gap-4 mb-1 sm:mb-2 flex-shrink-0">
-                            <span className="text-blue-400 font-bold text-sm sm:text-base md:text-lg">
+                            <span className="text-primary-light font-display font-semibold text-sm sm:text-base md:text-lg">
                                 {boss ? student.name : "Team 1"}
                             </span>
                             <div className="flex items-center gap-2 sm:gap-3">
-                                <span className="text-white text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold">
+                                <span className="text-white font-display text-xl sm:text-2xl md:text-3xl lg:text-4xl font-semibold">
                                     {scoreP1}
                                 </span>
-                                <span className="text-gray-500 text-lg sm:text-xl">–</span>
-                                <span className="text-white text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold">
+                                <span className="text-white/40 text-lg sm:text-xl">–</span>
+                                <span className="text-white font-display text-xl sm:text-2xl md:text-3xl lg:text-4xl font-semibold">
                                     {scoreP2}
                                 </span>
                             </div>
-                            <span className="text-red-400 font-bold text-sm sm:text-base md:text-lg">
+                            <span className="text-danger-light font-display font-semibold text-sm sm:text-base md:text-lg">
                                 {boss ? "Boss" : "Team 2"}
                             </span>
                         </div>
@@ -945,7 +1017,7 @@ export default function BattlePage() {
 
                     {/* ── Team 2 panel (or the computer boss) ── */}
                     {boss ? (
-                        <BossPanel boss={boss} score={scoreP2} gameOver={gameOver} />
+                        <BossPanel boss={boss} score={scoreP2} gameOver={gameOver} className="order-1 sm:order-none" />
                     ) : (
                     <TeamPanel
                         team={2}

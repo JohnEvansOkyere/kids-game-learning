@@ -5,7 +5,7 @@
  *
  * A winding road runs through the stage nodes; stars arc over each node, the
  * stage the child should play next pulses with a START bubble, and the boss
- * sits at the end. Pure CSS/SVG: no image files, so it stays tiny on cheap data.
+ * sits at the end. Compressed zone illustrations sit behind the SVG path.
  */
 import React from "react";
 import { CheckIcon, LockIcon, StarIcon } from "@/components/ui/Icons";
@@ -85,13 +85,21 @@ export default function ZoneScene({
                 filter: zone.unlocked ? undefined : "saturate(0.5) brightness(0.97)",
             }}
         >
+            <div
+                aria-hidden
+                className="pointer-events-none absolute inset-x-0 top-0 h-[300px] bg-cover bg-center opacity-65"
+                style={{
+                    backgroundImage: `url('/zones/${zone.id in SCENES ? zone.id : "village"}.webp')`,
+                    maskImage: "linear-gradient(to bottom, black 0%, black 34%, transparent 100%)",
+                }}
+            />
             {/* Soft clouds drifting behind the road */}
             <span aria-hidden className="animate-drift pointer-events-none absolute left-[6%] top-[26%] h-7 w-28 rounded-full bg-white/60 blur-[2px]" />
             <span aria-hidden className="animate-drift pointer-events-none absolute right-[4%] top-[58%] h-6 w-24 rounded-full bg-white/50 blur-[2px]" style={{ animationDuration: "24s" }} />
 
             <div className="relative mx-auto max-w-[480px]">
                 {/* Zone banner */}
-                <div className={`flex items-center gap-3 px-4 ${isFirst ? "pt-6" : "pt-12"}`}>
+                <div className={`relative mx-3 flex items-center gap-3 rounded-3xl bg-white/75 px-3 pb-3 shadow-sm backdrop-blur-[2px] ${isFirst ? "pt-3" : "pt-12"}`}>
                     <div className="plate flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white text-3xl">
                         {zone.emoji}
                     </div>

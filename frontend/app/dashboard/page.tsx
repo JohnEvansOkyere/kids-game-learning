@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { ChevronLeftIcon } from "@/components/ui/Icons";
 import type { Student } from "@/lib/types";
 
@@ -17,6 +18,16 @@ type Tile = {
 };
 
 const GAMES: Tile[] = [
+    {
+        href: "/games/market-day",
+        emoji: "🛒",
+        title: "Market Day",
+        blurb: "Run a stall and give each customer the right change.",
+        from: "#329b70",
+        to: "#177452",
+        ledge: "#0c5039",
+        ink: "#ffffff",
+    },
     {
         href: "/practice",
         emoji: "🌊",
@@ -148,7 +159,7 @@ export default function DashboardPage() {
                                 } as React.CSSProperties
                             }
                         >
-                            <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/35 text-4xl">{game.emoji}</span>
+                            <span className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl bg-white/35 text-4xl">{game.title === "Market Day" ? <Image src="/market/shopkeeper.webp" alt="" width={320} height={480} unoptimized className="h-20 w-auto object-contain object-top" /> : game.emoji}</span>
                             <span>
                                 <span className="block font-display text-2xl font-semibold">{game.title}</span>
                                 <span className="mt-0.5 block font-semibold opacity-85">{game.blurb}</span>

@@ -4,6 +4,8 @@ import React, { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Header from "@/components/layout/Header";
 import Button from "@/components/ui/Button";
+import { GameDone, GameIntro, GameTopBar, HudChip } from "@/components/games/GameScreen";
+import { CheckIcon } from "@/components/ui/Icons";
 import NodeResult from "@/components/world/NodeResult";
 import { getNodeIdFromUrl } from "@/lib/world";
 
@@ -74,10 +76,12 @@ export default function NumberPopPage() {
     if (!student) {
         return (
             <div className="min-h-screen bg-background flex items-center justify-center">
-                <p className="text-2xl text-gray-600">Loading...</p>
+                <p className="font-display text-2xl font-semibold text-ink-muted">Loading...</p>
             </div>
         );
     }
+
+    const playing = started && !gameOver;
 
     return (
         <div className="min-h-screen bg-background">
@@ -85,41 +89,39 @@ export default function NumberPopPage() {
 
             <div className="container mx-auto px-4 py-6">
                 <div className="max-w-2xl mx-auto">
-                    <div className="flex items-center justify-between mb-4">
-                        <button
-                            onClick={() => router.push(nodeId ? "/play" : "/dashboard")}
-                            className="text-primary font-bold hover:underline"
-                        >
-                            ← Back
-                        </button>
-                        {started && !gameOver && (
-                            <span className="text-xl font-bold text-primary">
-                                Tap: {nextToPop} →
-                            </span>
+                    <GameTopBar onBack={() => router.push(nodeId ? "/play" : "/dashboard")}>
+                        {playing && (
+                            <div className="flex flex-1 items-center gap-3">
+                                <div
+                                    className="h-5 flex-1 overflow-hidden rounded-full bg-ink/10 ring-1 ring-ink/5"
+                                    role="progressbar"
+                                    aria-valuemin={0}
+                                    aria-valuemax={MAX_NUMBER}
+                                    aria-valuenow={nextToPop - 1}
+                                >
+                                    <div
+                                        className="relative h-full rounded-full bg-gradient-to-b from-success-light to-success transition-all duration-300"
+                                        style={{ width: `${((nextToPop - 1) / MAX_NUMBER) * 100}%` }}
+                                    >
+                                        <span className="absolute inset-x-2 top-[3px] h-1 rounded-full bg-white/40" />
+                                    </div>
+                                </div>
+                                <HudChip>Tap {nextToPop} →</HudChip>
+                            </div>
                         )}
-                    </div>
+                    </GameTopBar>
 
                     {!started ? (
-                        <div className="text-center py-12">
-                            <h1 className="text-4xl font-bold text-primary mb-4">
-                                🔢 Number Pop 🔢
-                            </h1>
-                            <p className="text-xl text-gray-600 mb-6">
-                                Tap the numbers in order from 1 to {MAX_NUMBER},{" "}
-                                {student.name}!
-                            </p>
-                            <Button variant="primary" onClick={startGame}>
-                                Start Game
-                            </Button>
-                        </div>
+                        <GameIntro emoji="🔢" title="Number Pop" onStart={startGame} startLabel="Start">
+                            Tap the numbers in order from 1 to {MAX_NUMBER}, {student.name}!
+                        </GameIntro>
                     ) : gameOver ? (
-                        <div className="text-center py-12">
-                            <h2 className="text-4xl font-bold text-primary mb-4">
-                                Ayekoo! 🎉
-                            </h2>
-                            <p className="text-2xl text-gray-700 mb-6">
-                                You popped 1 to {MAX_NUMBER} in order!
-                            </p>
+                        <GameDone
+                            title="Ayekoo! 🎉"
+                            subtitle={`You popped 1 to ${MAX_NUMBER} in order!`}
+                            onPlayAgain={startGame}
+                            onExit={() => router.push("/dashboard")}
+                        >
                             {nodeId ? (
                                 <NodeResult
                                     key={gameKey}
@@ -129,50 +131,38 @@ export default function NumberPopPage() {
                                     total={MAX_NUMBER + mistakes}
                                     onPlayAgain={startGame}
                                 />
-                            ) : (
-                            <div className="flex gap-4 justify-center">
-                                <Button variant="primary" onClick={startGame}>
-                                    Play Again
-                                </Button>
-                                <Button
-                                    variant="secondary"
-                                    onClick={() => router.push("/dashboard")}
-                                >
-                                    Dashboard
-                                </Button>
-                            </div>
-                            )}
-                        </div>
+                            ) : undefined}
+                        </GameDone>
                     ) : (
                         <>
-                            {wrongTapped !== null && (
-                                <p className="text-center text-danger font-bold text-lg mb-2 animate-shake">
-                                    Tap {nextToPop} next, not {wrongTapped}! 👆
-                                </p>
-                            )}
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                                {shuffled.map((n) => (
-                                    <button
-                                        key={n}
-                                        type="button"
-                                        onClick={() => handlePop(n)}
-                                        className={`
-                                            min-h-[80px] rounded-2xl border-4 text-3xl font-bold
-                                            transition-all duration-200 hover:scale-105 active:scale-95
-                                            ${
-                                                n < nextToPop
-                                                    ? "bg-gray-300 border-gray-400 text-gray-500 cursor-default"
-                                                    : n === nextToPop
-                                                    ? "bg-primary border-primary-dark text-white shadow-lg"
-                                                    : "bg-white border-primary text-primary hover:border-primary-dark"
-                                            }
-                                            ${wrongTapped === n ? "animate-shake border-danger bg-danger/20" : ""}
-                                        `}
-                                        disabled={n < nextToPop}
-                                    >
-                                        {n}
-                                    </button>
-                                ))}
+                            {/* Reserved height so the grid doesn't jump when the hint appears */}
+                            <div className="mb-3 flex min-h-[3rem] items-center justify-center">
+                                {wrongTapped !== null && (
+                                    <p className="animate-shake rounded-full bg-danger/10 px-4 py-2 font-display text-lg font-semibold text-danger-dark">
+                                        Tap {nextToPop} next, not {wrongTapped}! 👆
+                                    </p>
+                                )}
+                            </div>
+                            <div className="grid grid-cols-2 gap-4 rounded-4xl bg-[#e7bc7e] p-4 shadow-card sm:grid-cols-3" style={{ backgroundImage: "linear-gradient(180deg,rgba(255,246,226,.36),rgba(255,246,226,.7)),url('/zones/village.webp')", backgroundPosition: "center", backgroundSize: "cover" }}>
+                                {shuffled.map((n) => {
+                                    const done = n < nextToPop;
+                                    const isNext = n === nextToPop;
+                                    const isWrong = wrongTapped === n;
+                                    return (
+                                        <Button
+                                            key={n}
+                                            variant={isWrong ? "danger" : done ? "success" : isNext ? "primary" : "neutral"}
+                                            onClick={() => handlePop(n)}
+                                            disabled={done}
+                                            aria-label={done ? `${n}, done` : String(n)}
+                                            // Popped keys fade to pale green, so their digits go dark green to stay readable
+                                            className={`!min-h-[88px] !text-4xl ${done ? "!text-success-dark" : ""} ${isWrong ? "animate-shake !opacity-100 ![filter:none]" : ""}`}
+                                        >
+                                            {n}
+                                            {done && <CheckIcon size={24} />}
+                                        </Button>
+                                    );
+                                })}
                             </div>
                         </>
                     )}
