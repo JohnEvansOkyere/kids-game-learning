@@ -5,7 +5,9 @@ from app.main import app
 from app.core.database import db
 
 
-@pytest.fixture(scope="session")
+# Function scoped: each test gets its own event loop, and the Prisma
+# connection is bound to the loop it was opened in
+@pytest.fixture
 async def prisma_db():
     if not db.is_connected():
         await db.connect()
@@ -17,9 +19,13 @@ async def prisma_db():
 @pytest.fixture(autouse=True)
 async def clean_db(prisma_db):
     # Order matters due to foreign keys
+    await prisma_db.event.delete_many()
+    await prisma_db.nodeprogress.delete_many()
+    await prisma_db.studentitem.delete_many()
     await prisma_db.answer.delete_many()
     await prisma_db.gamesession.delete_many()
     await prisma_db.question.delete_many()
+    await prisma_db.skill.delete_many()
     await prisma_db.student.delete_many()
     await prisma_db.parent.delete_many()
     await prisma_db.user.delete_many()

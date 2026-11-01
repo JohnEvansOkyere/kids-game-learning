@@ -1,7 +1,7 @@
 """
 Pydantic schemas for game-related requests/responses
 """
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional
 from datetime import datetime
 
@@ -39,6 +39,7 @@ class PracticeStartRequest(BaseModel):
     studentId: str
     topic: str  # counting, addition, subtraction, multiplication
     gradeLevel: str  # KG1, KG2, P1, P2, P3
+    skillId: Optional[str] = None  # set by map nodes; questions come from this skill
 
 
 class PracticeStartResponse(BaseModel):
@@ -90,3 +91,27 @@ class GameSessionResponse(BaseModel):
     
     class Config:
         from_attributes = True
+
+
+# ============ Offline Session Schemas ============
+
+class OfflineAnswer(BaseModel):
+    questionId: str
+    answer: int
+    timeSpent: int = Field(..., ge=0, le=600)  # seconds
+    answeredAt: datetime  # device time
+
+
+class OfflineSessionRequest(BaseModel):
+    """Answers from a session played without data, sent when back online"""
+    clientSessionId: str = Field(..., min_length=8, max_length=64)  # made on the device
+    studentId: str
+    topic: str
+    gradeLevel: str
+    startedAt: datetime
+    answers: List[OfflineAnswer] = Field(..., max_length=50)
+
+
+class OfflineSessionResponse(BaseModel):
+    sessionId: str
+    accepted: int  # answers saved by this request (repeats are skipped)

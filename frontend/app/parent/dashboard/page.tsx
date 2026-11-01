@@ -3,11 +3,13 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Header from "@/components/layout/Header";
-import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Avatar from "@/components/ui/Avatar";
-import { practiceApi } from "@/lib/api";
-import type { GameSession, Parent, Student } from "@/lib/types";
+import { StarIcon } from "@/components/ui/Icons";
+import SkillMap from "@/components/parent/SkillMap";
+import InstallPrompt from "@/components/pwa/InstallPrompt";
+import { practiceApi, skillsApi } from "@/lib/api";
+import type { GameSession, Parent, SkillMastery, Student } from "@/lib/types";
 
 /** Normalize session from API (handles camelCase or snake_case) */
 function norm(sess: Record<string, unknown>): {
@@ -42,6 +44,18 @@ function formatTotalTime(seconds: number): string {
     return min ? `${h}h ${min}m` : `${h}h`;
 }
 
+/** "3 days ago" reads better to a parent than a timestamp */
+function timeAgo(iso: string): string {
+    const minutes = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+    if (minutes < 1) return "just now";
+    if (minutes < 60) return `${minutes} min ago`;
+    const hours = Math.round(minutes / 60);
+    if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+    const days = Math.round(hours / 24);
+    if (days < 30) return `${days} day${days === 1 ? "" : "s"} ago`;
+    return new Date(iso).toLocaleDateString();
+}
+
 interface StudentSummary {
     student: Student;
     sessions: GameSession[];
@@ -52,6 +66,16 @@ interface StudentSummary {
     totalSessions: number;
     totalTimePracticed: number;
     lastPlayed: string | null;
+    mastery: SkillMastery[] | null; // null if it could not be loaded
+}
+
+function Stat({ label, children }: { label: string; children: React.ReactNode }) {
+    return (
+        <div className="px-4 py-3.5">
+            <p className="text-xs font-bold uppercase tracking-wider text-ink-muted">{label}</p>
+            <p className="mt-0.5 font-display text-2xl font-semibold text-ink">{children}</p>
+        </div>
+    );
 }
 
 export default function ParentDashboardPage() {
@@ -77,8 +101,11 @@ export default function ParentDashboardPage() {
             try {
                 const allSummaries: StudentSummary[] = [];
                 for (const s of parsedStudents) {
-                    const rawSessions = await practiceApi.getSessions(s.id);
-                    const sessions = rawSessions.map((sess) => norm(sess as Record<string, unknown>));
+                    const [rawSessions, mastery] = await Promise.all([
+                        practiceApi.getSessions(s.id),
+                        skillsApi.getMastery(s.id).catch(() => null),
+                    ]);
+                    const sessions = rawSessions.map((sess) => norm(sess as unknown as Record<string, unknown>));
                     const totalSessions = sessions.length;
                     const completed = sessions.filter((sess) => sess.completed);
 
@@ -119,6 +146,7 @@ export default function ParentDashboardPage() {
                         averageAccuracy,
                         bestAccuracy,
                         lastPlayed,
+                        mastery,
                     });
                 }
                 setSummaries(allSummaries);
@@ -141,8 +169,8 @@ export default function ParentDashboardPage() {
 
     if (!parent) {
         return (
-            <div className="min-h-screen bg-background flex items-center justify-center">
-                <p className="text-2xl text-gray-600">Loading parent dashboard...</p>
+            <div className="flex min-h-screen items-center justify-center bg-background">
+                <p className="font-display text-xl font-semibold text-ink-soft">Loading your dashboard…</p>
             </div>
         );
     }
@@ -151,133 +179,89 @@ export default function ParentDashboardPage() {
         <div className="min-h-screen bg-background">
             <Header />
 
-            <div className="container mx-auto px-4 py-8">
-                <div className="max-w-5xl mx-auto">
-                    <div className="text-center mb-8">
-                        <h2 className="text-4xl font-bold text-primary mb-2">
-                            Welcome, {parent.name}! 👋
-                        </h2>
-                        <p className="text-xl text-gray-600">
-                            Here&apos;s how your children are doing in MathChampions Ghana.
+            <div className="mx-auto max-w-5xl px-4 pb-16 pt-8 sm:px-6">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                    <div>
+                        <p className="font-display text-sm font-semibold uppercase tracking-wider text-ink-muted">
+                            Parent dashboard
+                        </p>
+                        <h1 className="font-display text-4xl font-semibold text-ink">Hello, {parent.name}</h1>
+                        <p className="mt-1 text-lg font-semibold text-ink-muted">
+                            Here&apos;s how your {students.length === 1 ? "child is" : "children are"} getting on.
                         </p>
                     </div>
+                    <Button variant="primary" onClick={() => router.push("/student/select")} className="sm:shrink-0">
+                        Open the game
+                    </Button>
+                </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                        <Card colorful className="text-center p-4">
-                            <p className="text-sm text-gray-500">Children</p>
-                            <p className="text-3xl font-bold text-primary">{students.length}</p>
-                        </Card>
-                        <Card colorful className="text-center p-4">
-                            <p className="text-sm text-gray-500">Total Score</p>
-                            <p className="text-3xl font-bold text-green-600">
-                                ✅ {totalScoreAll}
-                            </p>
-                        </Card>
-                        <Card colorful className="text-center p-4">
-                            <p className="text-sm text-gray-500">Total Stars Earned</p>
-                            <p className="text-3xl font-bold text-yellow-400">
-                                ⭐ {totalStarsAll}
-                            </p>
-                        </Card>
-                        <Card colorful className="text-center p-4">
-                            <p className="text-sm text-gray-500">Total Practice Sessions</p>
-                            <p className="text-3xl font-bold text-primary">
-                                {summaries.reduce((sum, s) => sum + s.totalSessions, 0)}
-                            </p>
-                        </Card>
-                    </div>
+                <div className="mt-6">
+                    <InstallPrompt />
+                </div>
 
-                    {loading && (
-                        <div className="text-center text-gray-600 mb-4">
-                            Loading practice history...
-                        </div>
-                    )}
+                <div className="card !p-0 grid grid-cols-2 divide-x divide-y divide-ink/10 overflow-hidden md:grid-cols-4 md:divide-y-0">
+                    <Stat label="Children">{students.length}</Stat>
+                    <Stat label="Correct answers">{totalScoreAll}</Stat>
+                    <Stat label="Stars earned">
+                        <span className="inline-flex items-center gap-1.5">
+                            <StarIcon size={24} />
+                            {totalStarsAll}
+                        </span>
+                    </Stat>
+                    <Stat label="Practice sessions">{summaries.reduce((sum, s) => sum + s.totalSessions, 0)}</Stat>
+                </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {summaries.map((summary) => (
-                            <Card key={summary.student.id} colorful className="p-6">
-                                <div className="flex items-center gap-4 mb-4">
-                                    <Avatar type={summary.student.avatar} size="medium" />
-                                    <div>
-                                        <h3 className="text-2xl font-bold text-primary">
-                                            {summary.student.name}
-                                        </h3>
-                                        <p className="text-gray-600">
-                                            Grade: {summary.student.gradeLevel}
-                                        </p>
-                                    </div>
-                                </div>
+                {loading && <p className="mt-6 text-center font-semibold text-ink-muted">Loading practice history…</p>}
 
-                                <div className="space-y-1 text-gray-700">
-                                    <p>
-                                        📚 Sessions played:{" "}
-                                        <span className="font-bold">
-                                            {summary.totalSessions}
-                                        </span>
-                                    </p>
-                                    <p>
-                                        ✅ Total score (correct answers):{" "}
-                                        <span className="font-bold">
-                                            {summary.totalScore}
-                                        </span>
-                                    </p>
-                                    <p>
-                                        ⭐ Total stars:{" "}
-                                        <span className="font-bold text-yellow-400">
-                                            {summary.totalStars}
-                                        </span>
-                                    </p>
-                                    <p>
-                                        📈 Average score:{" "}
-                                        <span className="font-bold">
-                                            {summary.averageAccuracy}%
-                                        </span>
-                                    </p>
-                                    <p>
-                                        🏅 Best score:{" "}
-                                        <span className="font-bold">
-                                            {summary.bestAccuracy}%
-                                        </span>
-                                    </p>
-                                    <p>
-                                        ⏱️ Total time practiced:{" "}
-                                        <span className="font-bold">
-                                            {formatTotalTime(summary.totalTimePracticed)}
-                                        </span>
-                                    </p>
-                                    <p>
-                                        🗓️ Last played:{" "}
-                                        <span className="font-bold">
-                                            {summary.lastPlayed
-                                                ? new Date(summary.lastPlayed).toLocaleString()
-                                                : "Not yet played"}
-                                        </span>
+                <div className="mt-6 grid grid-cols-1 gap-6">
+                    {summaries.map((summary) => (
+                        <section key={summary.student.id} className="card !p-5 sm:!p-7">
+                            <div className="flex flex-wrap items-center gap-4">
+                                <Avatar plate type={summary.student.avatar} size="medium" />
+                                <div className="min-w-0 flex-1">
+                                    <h2 className="font-display text-2xl font-semibold text-ink">{summary.student.name}</h2>
+                                    <p className="font-semibold text-ink-muted">
+                                        {summary.student.gradeLevel} ·{" "}
+                                        {summary.lastPlayed ? `last played ${timeAgo(summary.lastPlayed)}` : "hasn't played yet"}
                                     </p>
                                 </div>
-                            </Card>
-                        ))}
-                    </div>
+                            </div>
 
-                    <div className="mt-10 flex flex-wrap gap-4 justify-center">
-                        <Button
-                            variant="primary"
-                            onClick={() => router.push("/student/select")}
-                        >
-                            🎮 Go to Game
-                        </Button>
-                        <Button
-                            variant="secondary"
-                            onClick={() => {
-                                localStorage.removeItem("token");
-                                router.push("/login");
-                            }}
-                        >
-                            Logout
-                        </Button>
-                    </div>
+                            <div className="mt-5 grid grid-cols-2 divide-x divide-y divide-ink/10 overflow-hidden rounded-2xl ring-1 ring-ink/10 sm:grid-cols-3">
+                                <Stat label="Sessions">{summary.totalSessions}</Stat>
+                                <Stat label="Correct answers">{summary.totalScore}</Stat>
+                                <Stat label="Stars">
+                                    <span className="inline-flex items-center gap-1.5">
+                                        <StarIcon size={22} />
+                                        {summary.totalStars}
+                                    </span>
+                                </Stat>
+                                <Stat label="Average score">{summary.averageAccuracy}%</Stat>
+                                <Stat label="Best score">{summary.bestAccuracy}%</Stat>
+                                <Stat label="Time practised">{formatTotalTime(summary.totalTimePracticed)}</Stat>
+                            </div>
+
+                            {summary.mastery ? (
+                                <SkillMap mastery={summary.mastery} gradeLevel={summary.student.gradeLevel} />
+                            ) : (
+                                <p className="mt-5 font-semibold text-ink-muted">Skill progress isn&apos;t available right now.</p>
+                            )}
+                        </section>
+                    ))}
+                </div>
+
+                <div className="mt-10 flex justify-center">
+                    <Button
+                        variant="neutral"
+                        onClick={() => {
+                            localStorage.removeItem("token");
+                            router.push("/login");
+                        }}
+                    >
+                        Log out
+                    </Button>
                 </div>
             </div>
         </div>
     );
 }
-

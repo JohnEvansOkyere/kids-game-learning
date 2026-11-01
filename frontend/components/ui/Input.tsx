@@ -1,5 +1,5 @@
 /**
- * Input Component - Large, kid-friendly input field
+ * Input Component - large, calm input field with a proper label
  */
 import React from "react";
 
@@ -13,38 +13,43 @@ export default function Input({
     error,
     className = "",
     type = "text",
+    id,
     ...props
 }: InputProps) {
     // if the input is a password field we allow toggling visibility
     const [visible, setVisible] = React.useState(false);
+    const generatedId = React.useId();
+    const inputId = id ?? generatedId;
     const isPassword = type === "password";
     const inputType = isPassword ? (visible ? "text" : "password") : type;
 
     return (
         <div className="w-full">
             {label && (
-                <label className="block text-lg font-bold text-gray-700 mb-2">
+                <label htmlFor={inputId} className="block text-sm font-semibold text-ink-soft mb-1.5">
                     {label}
                 </label>
             )}
             <div className="relative">
                 <input
+                    id={inputId}
                     type={inputType}
-                    className={`input ${error ? "border-danger" : ""} ${className} ${isPassword ? "pr-10" : ""}`}
+                    className={`input ${error ? "border-danger" : ""} ${className} ${isPassword ? "pr-16" : ""}`}
                     {...props}
                 />
                 {isPassword && (
                     <button
                         type="button"
-                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500"
+                        className="absolute inset-y-0 right-0 px-4 flex items-center text-sm font-semibold text-primary"
                         onClick={() => setVisible((v) => !v)}
+                        aria-label={visible ? "Hide password" : "Show password"}
                     >
-                        {visible ? "🙈" : "👁️"}
+                        {visible ? "Hide" : "Show"}
                     </button>
                 )}
             </div>
             {error && (
-                <p className="mt-2 text-danger text-sm font-bold animate-shake">
+                <p className="mt-2 text-danger-dark text-sm font-semibold animate-shake">
                     {error}
                 </p>
             )}

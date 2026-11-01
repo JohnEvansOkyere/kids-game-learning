@@ -3,7 +3,7 @@ Game router - handles practice mode and game sessions
 """
 from fastapi import APIRouter, HTTPException, status, Depends
 from typing import List
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 import random
 import logging
 
@@ -11,14 +11,42 @@ from app.schemas_game import (
     PracticeStartRequest, PracticeStartResponse,
     AnswerSubmitRequest, AnswerSubmitResponse,
     PracticeCompleteRequest, PracticeCompleteResponse,
-    GameSessionResponse, QuestionWithAnswer
+    GameSessionResponse, QuestionWithAnswer,
+    OfflineSessionRequest, OfflineSessionResponse,
 )
 from app.core.database import get_db
 from app.routers.auth import get_current_user
+from app.skills_content import SKILLS_BY_ID
+from app.routers.world import get_owned_student
 from prisma import Prisma
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+VALID_TOPICS = ["counting", "addition", "subtraction", "multiplication"]
+VALID_GRADES = ["KG1", "KG2", "P1", "P2", "P3"]
+# Offline answers older than this are dropped
+MAX_OFFLINE_AGE = timedelta(days=30)
+
+
+def practice_stars(accuracy: float) -> int:
+    """Practice reward stars (10-50) for an accuracy percentage"""
+    if accuracy >= 90:
+        return 50
+    if accuracy >= 80:
+        return 40
+    if accuracy >= 70:
+        return 30
+    if accuracy >= 60:
+        return 20
+    return 10
+
+
+def device_time(value: datetime, now: datetime) -> datetime:
+    """A device timestamp as UTC, never later than the server's now"""
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    return min(value, now)
 
 
 @router.post("/practice/start", response_model=PracticeStartResponse)
@@ -66,13 +94,24 @@ async def start_practice_session(
                 detail=f"Invalid grade level. Must be one of: {', '.join(valid_grades)}"
             )
         
-        # Fetch random questions
-        questions = await db.question.find_many(
-            where={
-                "topic": request.topic,
-                "gradeLevel": request.gradeLevel
-            }
-        )
+        if request.skillId is not None and request.skillId not in SKILLS_BY_ID:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Unknown skill '{request.skillId}'"
+            )
+
+        # Fetch random questions: by skill when the map asks for one
+        questions = []
+        if request.skillId:
+            questions = await db.question.find_many(where={"skillId": request.skillId})
+        if not questions:
+            # Free play, or a database whose questions are not tagged with skills yet
+            questions = await db.question.find_many(
+                where={
+                    "topic": request.topic,
+                    "gradeLevel": request.gradeLevel
+                }
+            )
         
         if not questions:
             raise HTTPException(
@@ -283,18 +322,7 @@ async def complete_practice_session(
         
         # Calculate accuracy and stars
         accuracy = (session.correctAnswers / session.totalQuestions * 100) if session.totalQuestions > 0 else 0
-        
-        # Star calculation: 1-5 stars based on accuracy
-        if accuracy >= 90:
-            stars = 50
-        elif accuracy >= 80:
-            stars = 40
-        elif accuracy >= 70:
-            stars = 30
-        elif accuracy >= 60:
-            stars = 20
-        else:
-            stars = 10
+        stars = practice_stars(accuracy)
         
         # Update session
         await db.gamesession.update(
@@ -397,3 +425,107 @@ async def get_student_sessions(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to fetch sessions: {str(e)}"
         )
+
+
+@router.post("/practice/offline-sessions", response_model=OfflineSessionResponse)
+async def save_offline_session(
+    request: OfflineSessionRequest,
+    user = Depends(get_current_user),
+    db: Prisma = Depends(get_db)
+):
+    """
+    Save answers from a session played without data
+
+    The device sends them when it is back online. Sending the same session
+    again (e.g. after a network failure, or with more answers) only adds the
+    answers not saved yet. Correctness is checked here, not trusted from the device.
+    """
+    await get_owned_student(request.studentId, user, db)
+
+    if request.topic not in VALID_TOPICS or request.gradeLevel not in VALID_GRADES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid topic or grade level"
+        )
+
+    now = datetime.now(timezone.utc)
+
+    session = await db.gamesession.find_unique(where={"clientId": request.clientSessionId})
+    if session is None:
+        data = {
+            "clientId": request.clientSessionId,
+            "studentId": request.studentId,
+            "sessionType": "practice",
+            "topic": request.topic,
+            "gradeLevel": request.gradeLevel,
+            "totalQuestions": 0,
+            "completed": True,
+            "startedAt": device_time(request.startedAt, now),
+            "completedAt": now,
+        }
+        try:
+            session = await db.gamesession.create(data=data)
+        except Exception:
+            # Two sends of the same new session raced; use the one that won
+            session = await db.gamesession.find_unique(where={"clientId": request.clientSessionId})
+            if session is None:
+                raise
+
+    if session.studentId != request.studentId:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied"
+        )
+
+    # First answer per question wins, matching the online rule
+    answers = {}
+    for a in request.answers:
+        answered_at = device_time(a.answeredAt, now)
+        if now - answered_at <= MAX_OFFLINE_AGE:
+            answers.setdefault(a.questionId, (a, answered_at))
+
+    questions = {
+        q.id: q for q in await db.question.find_many(where={"id": {"in": list(answers)}})
+    } if answers else {}
+    already_saved = {
+        a.questionId for a in await db.answer.find_many(
+            where={"sessionId": session.id, "questionId": {"in": list(questions)}}
+        )
+    } if questions else set()
+
+    rows = []
+    for question_id, (a, answered_at) in answers.items():
+        question = questions.get(question_id)
+        if question is None or question_id in already_saved:
+            continue
+        rows.append({
+            "sessionId": session.id,
+            "questionId": question_id,
+            "selectedAnswer": a.answer,
+            "isCorrect": a.answer == question.correctAnswer,
+            "timeSpent": a.timeSpent,
+            "answeredAt": answered_at,
+        })
+
+    if rows:
+        accepted = await db.answer.create_many(data=rows, skip_duplicates=True)
+        correct = sum(1 for r in rows if r["isCorrect"])
+        updated = await db.gamesession.update(
+            where={"id": session.id},
+            data={
+                "totalQuestions": {"increment": len(rows)},
+                "correctAnswers": {"increment": correct},
+                "wrongAnswers": {"increment": len(rows) - correct},
+                "totalTimeSpent": {"increment": sum(r["timeSpent"] for r in rows)},
+            },
+        )
+        accuracy = updated.correctAnswers / updated.totalQuestions * 100
+        await db.gamesession.update(
+            where={"id": session.id},
+            data={"starsEarned": practice_stars(accuracy)},
+        )
+    else:
+        accepted = 0
+
+    logger.info(f"Offline session {session.id}: saved {accepted} answers")
+    return OfflineSessionResponse(sessionId=session.id, accepted=accepted)
