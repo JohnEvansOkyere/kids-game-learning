@@ -27,7 +27,14 @@ import type {
     OfflineSessionRequest,
 } from "./types";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const configuredApiUrl = process.env.NEXT_PUBLIC_API_URL?.trim().replace(/\/+$/, "") || "";
+const localApi = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(?::\d+)?(?:\/|$)/i.test(configuredApiUrl);
+const production = process.env.NODE_ENV === "production";
+// Public API host: keeps production usable if Vercel has no API URL or inherited a local one.
+const productionApiUrl = "https://kids-game-learning.onrender.com";
+const API_URL = production
+    ? configuredApiUrl && !localApi && configuredApiUrl.startsWith("https://") ? configuredApiUrl : productionApiUrl
+    : configuredApiUrl || "http://localhost:8000";
 
 // Create axios instance
 const api = axios.create({
