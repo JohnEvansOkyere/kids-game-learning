@@ -10,4 +10,10 @@ services:
 
     healthCheckPath: /health
 
+    envVars:
+      # Keep Prisma's query-engine binary inside the project dir so it survives
+      # from build to runtime (/opt/render/.cache is not available at runtime).
+      - key: PRISMA_BINARY_CACHE_DIR
+        value: /opt/render/project/src/backend/.prisma-binaries
+
     # Set in Dashboard: DATABASE_URL, JWT_SECRET_KEY, CORS_ORIGINS (Vercel URL)
