@@ -29,5 +29,7 @@ echo "Copied Prisma engine from $ENGINE_SRC to $(pwd)/$ENGINE_NAME"
 # Database steps get hard time limits: a dropped Postgres connection makes the
 # Prisma engine hang silently, which otherwise burns Render's 2-hour build timeout.
 timeout 180 prisma db push --skip-generate
+# The game needs questions: fill an empty table (and fail the build if that fails).
+timeout 300 python -m scripts.seed_questions --if-empty
 timeout 300 python -m scripts.backfill_question_skills \
   || echo "WARNING: question-skill backfill failed or timed out; re-run it later (safe to repeat)" >&2

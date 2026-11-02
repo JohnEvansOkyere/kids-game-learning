@@ -1,6 +1,9 @@
 """
 Question seeding script for MathChampions Ghana
 Seeds 100+ math questions with Ghana-specific context
+
+    python -m scripts.seed_questions             # replace unanswered questions
+    python -m scripts.seed_questions --if-empty  # only seed an empty table (used on deploy)
 """
 import asyncio
 import random
@@ -422,16 +425,19 @@ async def insert_questions(db: Prisma, questions: list[dict]) -> int:
     return len(questions)
 
 
-async def main():
-    """Main seeding function"""
+async def main(if_empty: bool = False):
+    """Main seeding function; with if_empty, do nothing when questions already exist"""
     db = Prisma()
     await db.connect()
     
     try:
-        print("🌱 Starting question seeding...")
-        
         # Check if questions already exist
         existing_count = await db.question.count()
+        if if_empty and existing_count > 0:
+            print(f"✅ {existing_count} questions already in the database, skipping seed")
+            return
+
+        print("🌱 Starting question seeding...")
         if existing_count > 0:
             deleted = await clear_unanswered_questions(db)
             print(f"⚠️  Found {existing_count} existing questions. Deleted {deleted} unanswered ones...")
@@ -481,4 +487,5 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    import sys
+    asyncio.run(main(if_empty="--if-empty" in sys.argv))

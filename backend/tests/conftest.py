@@ -1,7 +1,25 @@
-import pytest
-from httpx import AsyncClient
+import os
+from urllib.parse import urlparse
 
-from app.main import app
+import pytest
+
+# Every test wipes every table (see clean_db), so tests must never reach a real
+# database. Pick the test DB here, before app config loads ../.env.local (which
+# holds the Neon production URL), and refuse anything that isn't local.
+os.environ["DATABASE_URL"] = os.environ.get(
+    # Default: the Postgres from backend/docker-compose.yml
+    "TEST_DATABASE_URL", "postgresql://postgres:postgres@localhost:5433/mathchampions"
+)
+_test_db_host = urlparse(os.environ["DATABASE_URL"]).hostname
+if _test_db_host not in ("localhost", "127.0.0.1", "::1", "db", "postgres"):
+    raise pytest.UsageError(
+        f"Refusing to run tests against {_test_db_host}: the suite deletes all data. "
+        "Point TEST_DATABASE_URL at a local database."
+    )
+
+from httpx import AsyncClient  # noqa: E402
+
+from app.main import app  # noqa: E402
 from app.core.database import db
 
 
