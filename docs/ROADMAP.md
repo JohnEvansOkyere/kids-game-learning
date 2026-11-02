@@ -45,7 +45,9 @@ Polish (can run in parallel)
 - [ ] Commission one consistent Ghanaian art style (characters + zone backgrounds)
 - [x] Sound and juice pass: unlock animation, chest opening, coin burst
 - [x] Visual design pass: design tokens, 3D buttons, Fredoka/Nunito, painted zone scenes with a winding road, HUD + bottom dock, "next goal" card, dress-up shop, sequenced reward reveal, calm parent screens (see `docs/frontend-ui.md`)
-- [ ] Restyle Tug of War, Counting Catch and Number Pop screens to match (they inherit the new buttons/cards but keep their own layouts)
+- [x] Restyle Tug of War, Counting Catch and Number Pop to match (shared intro/finish cards, 3D keypad, boss battle stacks vertically on phones)
+- [ ] Two-player Tug of War on a phone still uses the squeezed 3-column layout; design a face-to-face layout (second keypad rotated 180°) if schools play it on phones
+- [ ] Restyle the free-play topic picker on `/practice` and `/student/add` (they still use the old card layout)
 - [ ] Daily streak that forgives a missed day (needs a backend field; do not add a guilt-based streak)
 - [ ] Haptic tick on tap (`navigator.vibrate`) and a PIN gate on the parent area
 - [x] "Fun break" after every 5 problems in river stages (tap-the-fish, ~10 s, timer paused)

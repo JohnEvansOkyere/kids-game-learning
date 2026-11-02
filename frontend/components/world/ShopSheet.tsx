@@ -102,7 +102,7 @@ export default function ShopSheet({ world, avatar, busy, error, onBuyOrEquip, on
                                     ) : (
                                         <span
                                             className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-display text-sm font-semibold ${
-                                                canAfford ? "bg-secondary text-[#4a2b00]" : "bg-ink/10 text-ink-muted"
+                                                canAfford ? "bg-secondary text-ink" : "bg-ink/10 text-ink-muted"
                                             }`}
                                         >
                                             <CoinIcon size={16} />

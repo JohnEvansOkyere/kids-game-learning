@@ -111,13 +111,13 @@ export default function MarketDayPage() {
 
     if (!student) return <div className="min-h-screen bg-background" />;
     return (
-        <main className="min-h-screen bg-[#f8f1df] pb-10 text-[#263b32]">
+        <main className="min-h-screen bg-background pb-10 text-ink">
             <div className="mx-auto max-w-2xl px-4 pt-5">
                 <GameTopBar onBack={() => router.push("/dashboard")}>
-                    <span className="rounded-full bg-white px-4 py-2 font-display font-bold shadow-sm">⭐ {score} <span className="ml-2 text-sm text-[#6a756a]">Best {best}</span></span>
+                    <span className="rounded-full bg-white px-4 py-2 font-display font-bold shadow-sm">⭐ {score} <span className="ml-2 text-sm text-ink-muted">Best {best}</span></span>
                 </GameTopBar>
-                <div className="relative mb-5 h-40 overflow-hidden rounded-[2rem] bg-[#28775b] shadow-lg sm:h-48" style={{ backgroundImage: "linear-gradient(90deg,rgba(19,60,43,.82),rgba(19,60,43,.05)),url('/market-day-bg.webp')", backgroundPosition: "center", backgroundSize: "cover" }}>
-                    <div className="absolute bottom-4 left-5 z-10 text-white"><p className="text-sm font-bold uppercase tracking-widest">MathChampions Ghana</p><h1 className="font-display text-4xl font-bold drop-shadow-md">Market Day</h1></div>
+                <div className="relative mb-5 h-40 overflow-hidden rounded-[2rem] bg-primary shadow-lg sm:h-48">
+                    <div className="absolute bottom-4 left-5 z-10 text-white"><p className="text-sm font-bold uppercase tracking-widest">MathChampions Ghana</p><h1 className="font-display text-4xl font-bold">Market Day</h1></div>
                     <Image src="/market/shopkeeper.webp" alt="" width={320} height={480} unoptimized className="absolute -bottom-12 right-0 h-56 w-auto drop-shadow-xl sm:right-8 sm:h-64" />
                 </div>
                 {!started ? (
@@ -129,35 +129,35 @@ export default function MarketDayPage() {
                 ) : round >= orders.length ? (
                     <GameDone title="Market star! 🌟" subtitle={`You served ${orders.length} customers and scored ${score} points. Best: ${best}.`} onPlayAgain={restart} onExit={() => router.push("/dashboard")} />
                 ) : (
-                    <div className="overflow-hidden rounded-[2rem] border-4 border-[#573c28] bg-[#fff9eb] shadow-[0_10px_0_#b69268]">
-                        <div className="relative overflow-hidden bg-[#28775b] text-white">
-                            <div className="flex h-12" aria-hidden>{Array.from({length: 8}, (_, i) => <span key={i} className={`flex-1 rounded-b-3xl ${i % 2 ? "bg-[#fff4dc]" : "bg-[#d65b45]"}`} />)}</div>
+                    <div className="overflow-hidden rounded-[2rem] border-4 border-primary bg-white shadow-card">
+                        <div className="relative overflow-hidden bg-primary text-white">
+                            <div className="flex h-12" aria-hidden>{Array.from({length: 8}, (_, i) => <span key={i} className={`flex-1 rounded-b-3xl ${i % 2 ? "bg-white" : "bg-secondary"}`} />)}</div>
                             <div className="px-5 pb-4 pt-2">
                                 <div className="flex items-center justify-between"><span className="font-display text-xl font-bold">🛍️ {student.name}&apos;s stall</span><span className="font-bold">{round + 1} / {orders.length}</span></div>
-                                <div className="mt-3 flex gap-2" aria-label={`${round} customers served`}>{orders.map((_, i) => <span key={i} className={`h-3 flex-1 rounded-full ${i < round ? "bg-[#ffcf5b]" : i === round ? "bg-white" : "bg-white/25"}`} />)}</div>
+                                <div className="mt-3 flex gap-2" aria-label={`${round} customers served`}>{orders.map((_, i) => <span key={i} className={`h-3 flex-1 rounded-full ${i < round ? "bg-secondary" : i === round ? "bg-white" : "bg-primary ring-2 ring-inset ring-white"}`} />)}</div>
                             </div>
                         </div>
                         <div className="grid gap-4 p-5 sm:grid-cols-[1fr_1fr]">
-                            <div className="flex min-h-48 flex-col items-center justify-center rounded-3xl bg-[#ffe7b4] p-4 text-center">
+                            <div className="flex min-h-48 flex-col items-center justify-center rounded-3xl bg-white p-4 text-center ring-2 ring-primary">
                                 <div className="flex items-end gap-2"><Image src={`/market/customer-${round + 1}.webp`} alt="Customer" width={240} height={240} unoptimized className="h-24 w-24 object-contain" /><Image src={`/market/${order.item}.webp`} alt={order.item} width={240} height={240} unoptimized className="h-28 w-28 object-contain" /></div>
                                 <p className="mt-2 font-display text-2xl font-bold capitalize">{order.item}</p>
-                                <p className="mt-2 rounded-full bg-white px-5 py-2 text-xl font-bold">Price: ₵{order.price}</p>
+                                <p className="mt-2 rounded-full bg-secondary px-5 py-2 text-xl font-bold text-ink">Price: ₵{order.price}</p>
                             </div>
-                            <div className="flex flex-col justify-center rounded-3xl bg-[#e6f3e8] p-5 text-center">
+                            <div className="flex flex-col justify-center rounded-3xl bg-white p-5 text-center ring-2 ring-primary">
                                 <p className="text-lg font-semibold">Customer pays</p>
-                                <p className="font-display text-5xl font-bold text-[#126443]">₵{order.paid}</p>
+                                <p className="font-display text-5xl font-bold text-primary">₵{order.paid}</p>
                                 <p className="mt-4 text-lg font-semibold">Give back</p>
                                 <p className="font-display text-4xl font-bold">₵{change}</p>
                             </div>
                         </div>
                         <div className="px-5 pb-6">
-                            {combo > 1 && !celebrating && <p className="mb-2 rounded-xl bg-[#fff0c7] px-3 py-2 text-center font-display font-bold">🔥 {combo} perfect customers in a row!</p>}
+                            {combo > 1 && !celebrating && <p className="mb-2 rounded-xl bg-secondary px-3 py-2 text-ink text-center font-display font-bold">🔥 {combo} perfect customers in a row!</p>}
                             <p className="mb-2 font-display text-xl font-bold">Change tray <span className="float-right">₵{total} / ₵{change}</span></p>
-                            <div className="flex min-h-20 flex-wrap items-center gap-2 rounded-2xl border-2 border-dashed border-[#ae9670] bg-[#f0e2c8] p-3" aria-live="polite">
-                                {tray.length ? tray.map((money, i) => <span key={i} className={`flex h-12 items-center justify-center border-4 font-display text-lg font-bold shadow-sm ${money <= 2 ? "w-12 rounded-full border-[#bc8333] bg-[#fbd174]" : "w-20 rounded-lg border-[#789a74] bg-[#c5dfbd]"}`}>₵{money}</span>) : <span className="text-[#6d6859]">Tap money below to fill the tray</span>}
+                            <div className="flex min-h-20 flex-wrap items-center gap-2 rounded-2xl border-2 border-dashed border-primary bg-white p-3" aria-live="polite">
+                                {tray.length ? tray.map((money, i) => <span key={i} className={`flex h-12 items-center justify-center border-4 font-display text-lg font-bold shadow-sm ${money <= 2 ? "w-12 rounded-full border-secondary bg-secondary text-ink" : "w-20 rounded-lg border-primary bg-primary text-white"}`}>₵{money}</span>) : <span className="text-ink-muted">Tap money below to fill the tray</span>}
                             </div>
                             <div className="mt-4 grid grid-cols-4 gap-2">
-                                {COINS.filter((money) => money <= (student.gradeLevel === "KG1" || student.gradeLevel === "KG2" || student.gradeLevel === "P1" ? 5 : 10)).map((money) => <button key={money} type="button" disabled={celebrating} onClick={() => addCoin(money)} aria-label={`Add ${money} cedis`} className={`min-h-16 border-b-4 font-display text-xl font-bold active:translate-y-1 active:border-b-0 disabled:opacity-50 ${money <= 2 ? "rounded-full border-[#b47a27] bg-[#ffcd62]" : "rounded-xl border-[#5b8563] bg-[#b5d5aa]"}`}>₵{money}</button>)}
+                                {COINS.filter((money) => money <= (student.gradeLevel === "KG1" || student.gradeLevel === "KG2" || student.gradeLevel === "P1" ? 5 : 10)).map((money) => <button key={money} type="button" disabled={celebrating} onClick={() => addCoin(money)} aria-label={`Add ${money} cedis`} className={`min-h-16 border-b-4 font-display text-xl font-bold active:translate-y-1 active:border-b-0 disabled:opacity-50 ${money <= 2 ? "rounded-full border-secondary bg-secondary text-ink" : "rounded-xl border-primary bg-primary text-white"}`}>₵{money}</button>)}
                             </div>
                             <div className="mt-4 min-h-12 text-center font-display text-lg font-bold" aria-live="polite">{message || (hint ? `Count on from ${order.price} to ${order.paid}. How much did you add?` : "")}</div>
                             <div className="flex gap-3">

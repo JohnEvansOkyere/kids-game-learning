@@ -23,9 +23,9 @@ const GAMES: Tile[] = [
         emoji: "🛒",
         title: "Market Day",
         blurb: "Run a stall and give each customer the right change.",
-        from: "#329b70",
-        to: "#177452",
-        ledge: "#0c5039",
+        from: "#1D4ED8",
+        to: "#1D4ED8",
+        ledge: "#1D4ED8",
         ink: "#ffffff",
     },
     {
@@ -33,9 +33,9 @@ const GAMES: Tile[] = [
         emoji: "🌊",
         title: "River Crossing",
         blurb: "Answer to step on the stones. Watch out for the crocodile!",
-        from: "#5CCBFF",
-        to: "#1E9BEA",
-        ledge: "#0F6FB5",
+        from: "#1D4ED8",
+        to: "#1D4ED8",
+        ledge: "#1D4ED8",
         ink: "#ffffff",
     },
     {
@@ -43,9 +43,9 @@ const GAMES: Tile[] = [
         emoji: "⚔️",
         title: "Tug of War",
         blurb: "Two players, one question. First right answer pulls the rope!",
-        from: "#FF8A7A",
-        to: "#FF4D3D",
-        ledge: "#A82217",
+        from: "#1D4ED8",
+        to: "#1D4ED8",
+        ledge: "#1D4ED8",
         ink: "#ffffff",
     },
     {
@@ -53,19 +53,19 @@ const GAMES: Tile[] = [
         emoji: "🌟",
         title: "Counting Catch",
         blurb: "Catch the falling stars. Can you get 10?",
-        from: "#FFE27A",
-        to: "#FFC21A",
-        ledge: "#C98600",
-        ink: "#4a2b00",
+        from: "#1D4ED8",
+        to: "#1D4ED8",
+        ledge: "#1D4ED8",
+        ink: "#ffffff",
     },
     {
         href: "/games/number-pop",
         emoji: "🔢",
         title: "Number Pop",
         blurb: "Pop the numbers in order, 1 to 10!",
-        from: "#B49CFF",
-        to: "#7A5CF5",
-        ledge: "#4B34C4",
+        from: "#1D4ED8",
+        to: "#1D4ED8",
+        ledge: "#1D4ED8",
         ink: "#ffffff",
     },
 ];
@@ -132,15 +132,14 @@ export default function DashboardPage() {
                     className="node-btn mt-6 flex w-full items-center gap-4 rounded-4xl p-5 text-left text-white"
                     style={
                         {
-                            backgroundImage: "linear-gradient(135deg,#7A5CF5,#3F2BD0)",
-                            "--ledge": "#2A1A9E",
+                            backgroundColor: "#1D4ED8",
                         } as React.CSSProperties
                     }
                 >
-                    <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-white/20 text-4xl">🗺️</span>
+                    <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-white text-4xl">🗺️</span>
                     <span className="min-w-0 flex-1">
                         <span className="block font-display text-2xl font-semibold">Adventure Map</span>
-                        <span className="block font-semibold text-white/80">Beat bosses, collect treasures, earn coins.</span>
+                        <span className="block font-semibold text-white">Beat bosses, collect treasures, earn coins.</span>
                     </span>
                 </button>
 
@@ -153,16 +152,15 @@ export default function DashboardPage() {
                             className="node-btn flex flex-col items-start gap-3 rounded-4xl p-5 text-left"
                             style={
                                 {
-                                    backgroundImage: `linear-gradient(160deg, ${game.from}, ${game.to})`,
+                                    backgroundColor: game.from,
                                     color: game.ink,
-                                    "--ledge": game.ledge,
                                 } as React.CSSProperties
                             }
                         >
-                            <span className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl bg-white/35 text-4xl">{game.title === "Market Day" ? <Image src="/market/shopkeeper.webp" alt="" width={320} height={480} unoptimized className="h-20 w-auto object-contain object-top" /> : game.emoji}</span>
+                            <span className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl bg-white text-4xl">{game.title === "Market Day" ? <Image src="/market/shopkeeper.webp" alt="" width={320} height={480} unoptimized className="h-20 w-auto object-contain object-top" /> : game.emoji}</span>
                             <span>
                                 <span className="block font-display text-2xl font-semibold">{game.title}</span>
-                                <span className="mt-0.5 block font-semibold opacity-85">{game.blurb}</span>
+                                <span className="mt-0.5 block font-semibold">{game.blurb}</span>
                             </span>
                         </button>
                     ))}
@@ -173,9 +171,9 @@ export default function DashboardPage() {
                         <div
                             key={item.title}
                             aria-disabled
-                            className="flex items-center gap-3 rounded-3xl bg-ink/5 p-4 text-ink-muted"
+                            className="flex items-center gap-3 rounded-3xl border-2 border-primary/20 p-4 text-ink-muted"
                         >
-                            <span className="text-3xl opacity-60 grayscale">{item.emoji}</span>
+                            <span className="text-3xl opacity-60">{item.emoji}</span>
                             <span className="min-w-0">
                                 <span className="block font-display text-base font-semibold">{item.title}</span>
                                 <span className="block text-xs font-bold uppercase tracking-wider">Coming soon</span>

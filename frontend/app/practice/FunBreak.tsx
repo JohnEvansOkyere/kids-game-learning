@@ -73,11 +73,11 @@ export default function FunBreak({ onDone }: { onDone: (result: FunBreakResult, 
     return (
         <div className="bg-white rounded-3xl border-4 border-secondary shadow-lg p-4 text-center animate-bounce-in">
             <h2 className="text-2xl sm:text-3xl font-bold text-primary">🎉 Fun Break! {theme.title}</h2>
-            <p className="text-lg font-bold text-gray-700 mb-2">
+            <p className="text-lg font-bold text-ink-soft mb-2">
                 {poppedCount < TARGETS ? `${poppedCount} / ${TARGETS}` : "Ayekoo! Back to the river! 🌊"}
             </p>
 
-            <div className="relative h-56 sm:h-64 rounded-2xl bg-gradient-to-b from-sky-100 to-cyan-200 overflow-hidden">
+            <div className="relative h-56 sm:h-64 rounded-2xl bg-primary/10 overflow-hidden">
                 {targets.map((t) => (
                     <button
                         key={t.id}

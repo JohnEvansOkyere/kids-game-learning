@@ -17,7 +17,7 @@ export default function HomePage() {
                 <h1 className="text-4xl font-bold text-primary mb-4">
                     MathChampions Ghana 🇬🇭
                 </h1>
-                <p className="text-xl text-gray-600">Loading...</p>
+                <p className="text-xl text-ink-soft">Loading...</p>
             </div>
         </div>
     );

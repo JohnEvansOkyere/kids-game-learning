@@ -56,7 +56,7 @@ async def create_student(
     
     # Convert date to datetime for Prisma
     from datetime import datetime as dt
-    dob_datetime = dt.combine(student.dateOfBirth, dt.min.time())
+    dob_datetime = dt.combine(student.dateOfBirth, dt.min.time()) if student.dateOfBirth else None
     
     # Create student
     new_student = await db.student.create(

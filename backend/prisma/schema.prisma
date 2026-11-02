@@ -31,7 +31,7 @@ model Parent {
   userId      String   @unique @map("user_id")
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   name        String
-  phoneNumber String   @map("phone_number")
+  phoneNumber String?  @map("phone_number") // optional: sign-up only asks for what's needed to play
   createdAt   DateTime @default(now()) @map("created_at")
   
   // Relations
@@ -48,7 +48,7 @@ model Student {
   name        String
   avatar      String   // lion, elephant, cheetah, monkey, eagle, fish
   gradeLevel  String   @map("grade_level") // KG1, KG2, P1, P2, P3
-  dateOfBirth DateTime @map("date_of_birth") @db.Date
+  dateOfBirth DateTime? @map("date_of_birth") @db.Date // optional at sign-up
   createdAt   DateTime @default(now()) @map("created_at")
   
   // Adventure World wallet

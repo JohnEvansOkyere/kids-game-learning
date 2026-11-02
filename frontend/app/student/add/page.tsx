@@ -40,7 +40,7 @@ export default function AddStudentPage() {
                 name: childName,
                 avatar: childAvatar,
                 gradeLevel: childGradeLevel,
-                dateOfBirth: childDateOfBirth,
+                dateOfBirth: childDateOfBirth || null,
             });
 
             const existing = localStorage.getItem("students");
@@ -66,7 +66,7 @@ export default function AddStudentPage() {
                             <h2 className="text-3xl font-bold text-primary mb-2">
                                 Add Another Child 🎉
                             </h2>
-                            <p className="text-gray-600 text-lg">
+                            <p className="text-ink-soft text-lg">
                                 Create a new student profile
                             </p>
                         </div>
@@ -82,7 +82,7 @@ export default function AddStudentPage() {
                             />
 
                             <div>
-                                <label className="block text-lg font-bold text-gray-700 mb-3">
+                                <label className="block text-lg font-bold text-ink-soft mb-3">
                                     Choose Avatar
                                 </label>
                                 <div className="grid grid-cols-3 gap-4">
@@ -93,7 +93,7 @@ export default function AddStudentPage() {
                                             onClick={() => setChildAvatar(avatar)}
                                             className={`card p-4 hover:scale-105 transition-transform ${childAvatar === avatar
                                                     ? "border-primary border-8 animate-pulse-glow"
-                                                    : "border-gray-300"
+                                                    : "border-primary/30"
                                                 }`}
                                         >
                                             <Avatar type={avatar} size="medium" />
@@ -106,7 +106,7 @@ export default function AddStudentPage() {
                             </div>
 
                             <div>
-                                <label className="block text-lg font-bold text-gray-700 mb-3">
+                                <label className="block text-lg font-bold text-ink-soft mb-3">
                                     Grade Level
                                 </label>
                                 <div className="grid grid-cols-5 gap-2">
@@ -117,7 +117,7 @@ export default function AddStudentPage() {
                                             onClick={() => setChildGradeLevel(grade)}
                                             className={`btn ${childGradeLevel === grade
                                                     ? "btn-primary"
-                                                    : "bg-gray-200 text-gray-700"
+                                                    : "bg-gray-200 text-ink-soft"
                                                 }`}
                                         >
                                             {grade}
@@ -128,10 +128,9 @@ export default function AddStudentPage() {
 
                             <Input
                                 type="date"
-                                label="Date of Birth"
+                                label="Date of Birth (optional)"
                                 value={childDateOfBirth}
                                 onChange={(e) => setChildDateOfBirth(e.target.value)}
-                                required
                             />
 
                             {error && (

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Fredoka, Nunito } from "next/font/google";
 import "./globals.css";
 import ServiceWorker from "@/components/pwa/ServiceWorker";
+import InstallPrompt from "@/components/pwa/InstallPrompt";
 
 // next/font downloads these at build time and serves them from our own origin,
 // so the offline service worker can keep them. latin-ext covers Twi (ɛ, ɔ) for later.
@@ -22,7 +23,10 @@ export const metadata: Metadata = {
     description: "Math Battle Game for Ghanaian Kids - Learn Math Through Fun Battles!",
     manifest: "/manifest.webmanifest",
     icons: {
-        icon: "/favicon.ico",
+        icon: [
+            { url: "/favicon.ico", sizes: "any" },
+            { url: "/icons/icon.svg", type: "image/svg+xml" },
+        ],
         apple: "/icons/apple-touch-icon.png",
     },
     appleWebApp: {
@@ -37,7 +41,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-    themeColor: "#5A44F2",
+    themeColor: "#1D4ED8",
     // Lets the bottom dock sit above the iPhone home bar (env(safe-area-inset-bottom))
     viewportFit: "cover",
 };
@@ -52,6 +56,7 @@ export default function RootLayout({
             <body>
                 {children}
                 <ServiceWorker />
+                <InstallPrompt />
             </body>
         </html>
     );

@@ -9,9 +9,6 @@
 
   body {
     @apply bg-background font-body text-ink antialiased;
-    /* A soft lavender glow at the top so the cream never reads as flat */
-    background-image: radial-gradient(900px 420px at 50% -80px, #ece6ff 0%, rgb(255 248 236 / 0) 70%);
-    background-repeat: no-repeat;
   }
 
   h1,
@@ -34,151 +31,118 @@
     outline: none;
   }
   *:focus-visible {
-    outline: 3px solid rgb(90 68 242 / 0.55);
+    outline: 3px solid #1d4ed8;
     outline-offset: 3px;
   }
 }
 
 @layer components {
   /*
-   * Chunky 3D button. The "ledge" is a hard shadow under the face; pressing
-   * pushes the face down onto it, so it feels like a real key.
-   * Variants only set the CSS variables.
+   * Flat button: one solid colour, no gradient, no second shade.
+   * Variants only set the CSS variables. Pressing pushes it down a touch.
    */
   .btn {
-    --btn-top: #ffffff;
-    --btn-bottom: #f1eeff;
-    --btn-ledge: #d3ccf3;
-    --btn-ink: #231b5c;
-    --btn-glow: 35 27 92;
+    --btn-bg: #ffffff;
+    --btn-ink: #1d4ed8;
+    --btn-edge: #1d4ed8;
     @apply relative inline-flex items-center justify-center gap-2 min-h-touch px-6 py-3 rounded-2xl;
     @apply font-display font-semibold text-lg leading-tight select-none;
     color: var(--btn-ink);
-    background-image: linear-gradient(180deg, var(--btn-top), var(--btn-bottom));
-    box-shadow:
-      inset 0 2px 0 rgb(255 255 255 / 0.55),
-      0 5px 0 var(--btn-ledge),
-      0 14px 20px -10px rgb(var(--btn-glow) / 0.5);
-    transition: transform 0.09s ease, box-shadow 0.09s ease, filter 0.2s ease;
+    background-color: var(--btn-bg);
+    border: 2px solid var(--btn-edge);
+    box-shadow: 0 6px 14px -8px rgb(16 42 107 / 0.45);
+    transition: transform 0.09s ease, box-shadow 0.09s ease, opacity 0.2s ease;
   }
 
   .btn:hover:not(:disabled) {
-    filter: brightness(1.05);
+    box-shadow: 0 8px 18px -8px rgb(16 42 107 / 0.55);
   }
 
   .btn:active:not(:disabled) {
-    transform: translateY(4px);
-    box-shadow:
-      inset 0 2px 0 rgb(255 255 255 / 0.35),
-      0 1px 0 var(--btn-ledge),
-      0 4px 8px -4px rgb(var(--btn-glow) / 0.5);
+    transform: translateY(2px) scale(0.99);
+    box-shadow: 0 2px 6px -4px rgb(16 42 107 / 0.5);
   }
 
   .btn:disabled {
     @apply cursor-not-allowed;
-    opacity: 0.55;
-    filter: saturate(0.6);
+    opacity: 0.5;
   }
 
+  /* Blue key with white text */
   .btn-primary {
     @apply btn;
-    --btn-top: #8b7cff;
-    --btn-bottom: #5a44f2;
-    --btn-ledge: #3524b8;
+    --btn-bg: #1d4ed8;
     --btn-ink: #ffffff;
-    --btn-glow: 90 68 242;
+    --btn-edge: #1d4ed8;
   }
 
-  /* Dark brown ink on gold: white on yellow fails contrast */
+  /* Yellow key; blue ink (white on yellow fails contrast) */
   .btn-secondary {
     @apply btn;
-    --btn-top: #ffe27a;
-    --btn-bottom: #ffc21a;
-    --btn-ledge: #c98600;
-    --btn-ink: #4a2b00;
-    --btn-glow: 201 134 0;
+    --btn-bg: #ffc21a;
+    --btn-ink: #102a6b;
+    --btn-edge: #ffc21a;
   }
 
+  /* "Go" is the brand blue */
   .btn-success {
     @apply btn;
-    --btn-top: #5edc96;
-    --btn-bottom: #22c06b;
-    --btn-ledge: #12904a;
+    --btn-bg: #1d4ed8;
     --btn-ink: #ffffff;
-    --btn-glow: 18 144 74;
+    --btn-edge: #1d4ed8;
   }
 
+  /* "Careful" is yellow with blue ink */
   .btn-danger {
     @apply btn;
-    --btn-top: #ff8a7a;
-    --btn-bottom: #ff4d3d;
-    --btn-ledge: #b0261a;
-    --btn-ink: #ffffff;
-    --btn-glow: 176 38 26;
+    --btn-bg: #ffc21a;
+    --btn-ink: #102a6b;
+    --btn-edge: #ffc21a;
   }
 
   /* Input fields */
   .input {
     @apply w-full min-h-touch px-4 py-3 rounded-2xl bg-white text-lg font-body text-ink;
-    border: 2px solid rgb(35 27 92 / 0.14);
-    box-shadow: inset 0 2px 0 rgb(35 27 92 / 0.04);
+    border: 2px solid rgb(29 78 216 / 0.3);
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
   }
   .input::placeholder {
-    color: rgb(35 27 92 / 0.35);
+    color: rgb(16 42 107 / 0.4);
   }
   .input:focus {
-    border-color: #5a44f2;
-    box-shadow: 0 0 0 4px rgb(90 68 242 / 0.16);
+    border-color: #1d4ed8;
+    box-shadow: 0 0 0 4px rgb(29 78 216 / 0.15);
   }
 
   /* Cards: white surface, hairline edge, soft ledge + long shadow. No chunky borders. */
   .card {
     @apply relative bg-white rounded-3xl p-6 shadow-card;
-    border: 2px solid rgb(35 27 92 / 0.06);
+    border: 2px solid rgb(29 78 216 / 0.12);
   }
 
   .card-colorful {
     @apply card;
   }
 
-  /* Kente-inspired strip: a quiet Ghana signature for headers and banners */
+  /* Signature strip: yellow dashes, flat, no extra colours */
   .kente-strip {
     height: 5px;
-    background: repeating-linear-gradient(
-      90deg,
-      #fcd116 0 14px,
-      #1a1445 14px 18px,
-      #ce1126 18px 30px,
-      #1a1445 30px 34px,
-      #006b3f 34px 50px,
-      #1a1445 50px 54px
-    );
+    background: repeating-linear-gradient(90deg, #ffc21a 0 22px, transparent 22px 30px);
   }
 
   /* Round character plate behind an avatar */
   .plate {
-    box-shadow:
-      inset 0 3px 0 rgb(255 255 255 / 0.55),
-      inset 0 -4px 0 rgb(0 0 0 / 0.08),
-      0 6px 0 rgb(35 27 92 / 0.18),
-      0 12px 18px -8px rgb(35 27 92 / 0.4);
+    box-shadow: 0 6px 14px -8px rgb(16 42 107 / 0.5);
   }
 
-  /* Map node: a pressable coin sitting on the road */
+  /* Map node: a flat coin sitting on the road */
   .node-btn {
-    box-shadow:
-      inset 0 3px 0 rgb(255 255 255 / 0.5),
-      0 6px 0 var(--ledge),
-      0 14px 16px -6px rgb(0 0 0 / 0.35);
+    box-shadow: 0 8px 14px -8px rgb(16 42 107 / 0.55);
     transition: transform 0.08s ease, box-shadow 0.08s ease;
   }
   .node-btn:active:not(:disabled) {
-    transform: translateY(5px);
-    box-shadow:
-      inset 0 3px 0 rgb(255 255 255 / 0.35),
-      0 1px 0 var(--ledge),
-      0 4px 8px -4px rgb(0 0 0 / 0.35);
+    transform: translateY(3px);
+    box-shadow: 0 3px 6px -4px rgb(16 42 107 / 0.5);
   }
 }
 

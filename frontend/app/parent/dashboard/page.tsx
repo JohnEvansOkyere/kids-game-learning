@@ -7,7 +7,6 @@ import Button from "@/components/ui/Button";
 import Avatar from "@/components/ui/Avatar";
 import { StarIcon } from "@/components/ui/Icons";
 import SkillMap from "@/components/parent/SkillMap";
-import InstallPrompt from "@/components/pwa/InstallPrompt";
 import { practiceApi, skillsApi } from "@/lib/api";
 import type { GameSession, Parent, SkillMastery, Student } from "@/lib/types";
 
@@ -195,11 +194,7 @@ export default function ParentDashboardPage() {
                     </Button>
                 </div>
 
-                <div className="mt-6">
-                    <InstallPrompt />
-                </div>
-
-                <div className="card !p-0 grid grid-cols-2 divide-x divide-y divide-ink/10 overflow-hidden md:grid-cols-4 md:divide-y-0">
+                <div className="card !p-0 mt-6 grid grid-cols-2 divide-x divide-y divide-ink/10 overflow-hidden md:grid-cols-4 md:divide-y-0">
                     <Stat label="Children">{students.length}</Stat>
                     <Stat label="Correct answers">{totalScoreAll}</Stat>
                     <Stat label="Stars earned">

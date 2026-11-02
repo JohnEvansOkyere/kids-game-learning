@@ -1,8 +1,8 @@
 /**
- * Avatar Component - the child's animal, optionally on a coloured character plate
+ * Avatar Component - the child's animal, optionally on a white character plate
  *
  * The illustrated animal stays readable at small HUD size and on selection cards.
- * With `plate` it sits on a round coloured disc.
+ * With `plate` it sits on a flat white disc with a blue ring.
  */
 import React from "react";
 import Image from "next/image";
@@ -15,16 +15,6 @@ interface AvatarProps {
     outfit?: string | null; // emoji of the equipped outfit
     plate?: boolean;
 }
-
-// One warm, distinct colour per animal so siblings are told apart at a glance
-const plateColors: Record<AvatarType, string> = {
-    lion: "linear-gradient(160deg,#FFE27A,#FFA928)",
-    elephant: "linear-gradient(160deg,#B9D8FF,#6BA6FF)",
-    cheetah: "linear-gradient(160deg,#FFC38A,#FF8A3D)",
-    monkey: "linear-gradient(160deg,#D9C2A3,#B8895B)",
-    eagle: "linear-gradient(160deg,#FFB3C1,#FF6F8E)",
-    fish: "linear-gradient(160deg,#9CF0E3,#2FC4B2)",
-};
 
 const sizeClasses = {
     small: "h-12 w-12",
@@ -49,8 +39,7 @@ export default function Avatar({
     if (plate) {
         return (
             <div
-                className={`plate relative flex shrink-0 items-center justify-center rounded-full ring-[3px] ring-white ${plateSizes[size]} ${className}`}
-                style={{ backgroundImage: plateColors[type] }}
+                className={`plate relative flex shrink-0 items-center justify-center rounded-full bg-white ring-[3px] ring-primary ${plateSizes[size]} ${className}`}
             >
                 <Image src={`/avatars/${type}.webp`} alt="" width={256} height={256} unoptimized className="h-[90%] w-[90%] object-contain drop-shadow-[0_2px_0_rgba(0,0,0,0.12)]" />
                 {outfit && (

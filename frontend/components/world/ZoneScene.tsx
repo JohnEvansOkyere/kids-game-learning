@@ -5,7 +5,7 @@
  *
  * A winding road runs through the stage nodes; stars arc over each node, the
  * stage the child should play next pulses with a START bubble, and the boss
- * sits at the end. Compressed zone illustrations sit behind the SVG path.
+ * sits at the end. Flat blue sky, white road, yellow for progress and rewards.
  */
 import React from "react";
 import { CheckIcon, LockIcon, StarIcon } from "@/components/ui/Icons";
@@ -26,12 +26,15 @@ type Scene = {
     ink: string;
 };
 
+// Every zone shares one look: flat blue sky, white road and hills, navy text.
+// Zones are told apart by their name and emoji, not by a different colour scheme.
+const FLAT: Scene = { sky: ["#1D4ED8", "#1D4ED8"], hill: ["#FFFFFF", "#FFFFFF"], road: "#FFFFFF", edge: "#FFFFFF", ink: "#102A6B" };
 const SCENES: Record<string, Scene> = {
-    village: { sky: ["#FFF0CC", "#FFB86B"], hill: ["#F6A04D", "#E07B24"], road: "#FFF6E3", edge: "#E3A560", ink: "#7C2D12" },
-    farm: { sky: ["#EEFBD2", "#A6E57E"], hill: ["#62CC5E", "#35A853"], road: "#FBFFEF", edge: "#8FC96A", ink: "#14532D" },
-    market: { sky: ["#FFF3C2", "#FFCF5C"], hill: ["#F5A623", "#D98209"], road: "#FFF9E4", edge: "#E2B04A", ink: "#78350F" },
-    forest: { sky: ["#C9F5DC", "#46C48D"], hill: ["#1FA06C", "#0F7B50"], road: "#EBFFF5", edge: "#5FC99B", ink: "#064E3B" },
-    coast: { sky: ["#C9EFFF", "#62CBF6"], hill: ["#F6D88F", "#EBBB5E"], road: "#FFFFFF", edge: "#9ADBF3", ink: "#0C4A6E" },
+    village: FLAT,
+    farm: FLAT,
+    market: FLAT,
+    forest: FLAT,
+    coast: FLAT,
 };
 
 type Point = { x: number; y: number };
@@ -79,27 +82,14 @@ export default function ZoneScene({
     return (
         <section
             aria-label={zone.name}
-            className={`relative overflow-hidden rounded-t-[2.25rem] shadow-[0_-14px_28px_-14px_rgba(35,27,92,0.35)] ${isFirst ? "" : "-mt-9"}`}
+            className={`relative overflow-hidden rounded-t-[2.25rem] shadow-[0_-14px_28px_-14px_rgba(16,42,107,0.45)] ${isFirst ? "" : "-mt-9"}`}
             style={{
-                backgroundImage: `radial-gradient(circle at 88% 4%, rgb(255 255 255 / 0.8), transparent 34%), linear-gradient(180deg, ${scene.sky[0]}, ${scene.sky[1]})`,
-                filter: zone.unlocked ? undefined : "saturate(0.5) brightness(0.97)",
+                backgroundColor: scene.sky[0],
             }}
         >
-            <div
-                aria-hidden
-                className="pointer-events-none absolute inset-x-0 top-0 h-[300px] bg-cover bg-center opacity-65"
-                style={{
-                    backgroundImage: `url('/zones/${zone.id in SCENES ? zone.id : "village"}.webp')`,
-                    maskImage: "linear-gradient(to bottom, black 0%, black 34%, transparent 100%)",
-                }}
-            />
-            {/* Soft clouds drifting behind the road */}
-            <span aria-hidden className="animate-drift pointer-events-none absolute left-[6%] top-[26%] h-7 w-28 rounded-full bg-white/60 blur-[2px]" />
-            <span aria-hidden className="animate-drift pointer-events-none absolute right-[4%] top-[58%] h-6 w-24 rounded-full bg-white/50 blur-[2px]" style={{ animationDuration: "24s" }} />
-
             <div className="relative mx-auto max-w-[480px]">
                 {/* Zone banner */}
-                <div className={`relative mx-3 flex items-center gap-3 rounded-3xl bg-white/75 px-3 pb-3 shadow-sm backdrop-blur-[2px] ${isFirst ? "pt-3" : "pt-12"}`}>
+                <div className={`relative mx-3 flex items-center gap-3 rounded-3xl bg-white px-3 pb-3 shadow-sm ${isFirst ? "pt-3" : "pt-12"}`}>
                     <div className="plate flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white text-3xl">
                         {zone.emoji}
                     </div>
@@ -107,37 +97,37 @@ export default function ZoneScene({
                         <h2 className="font-display text-2xl font-semibold leading-tight" style={{ color: scene.ink }}>
                             {zone.name}
                         </h2>
-                        <p className="text-sm font-semibold leading-snug" style={{ color: scene.ink, opacity: 0.75 }}>
+                        <p className="text-sm font-semibold leading-snug" style={{ color: scene.ink }}>
                             {zone.description}
                         </p>
                     </div>
                     <div
-                        className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/80 text-2xl shadow-lift ring-2 ${
-                            zone.bossReward.owned ? "ring-secondary" : "ring-white/60"
+                        className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white text-2xl shadow-lift ring-2 ${
+                            zone.bossReward.owned ? "ring-secondary" : "ring-primary"
                         }`}
                         title={zone.bossReward.owned ? zone.bossReward.name : "Beat the boss to win this!"}
                     >
-                        <span className={zone.bossReward.owned ? "" : "opacity-50 grayscale"}>
+                        <span className={zone.bossReward.owned ? "" : "opacity-50"}>
                             {zone.bossReward.owned ? zone.bossReward.emoji : "🎁"}
                         </span>
                     </div>
                 </div>
 
                 <div className="mt-3 flex items-center gap-2 px-4">
-                    <div className="h-3 flex-1 overflow-hidden rounded-full bg-black/10 ring-1 ring-black/5">
+                    <div className="h-3 flex-1 overflow-hidden rounded-full bg-white">
                         <div
-                            className="h-full rounded-full bg-gradient-to-r from-secondary-light to-secondary"
+                            className="h-full rounded-full bg-secondary"
                             style={{ width: `${progress}%` }}
                         />
                     </div>
-                    <span className="inline-flex items-center gap-1 font-display text-sm font-semibold" style={{ color: scene.ink }}>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 font-display text-sm font-semibold" style={{ color: scene.ink }}>
                         <StarIcon size={18} />
                         {zone.starsEarned}/{zone.starsTotal}
                     </span>
                 </div>
 
                 {!zone.unlocked && previousBoss && (
-                    <p className="mx-4 mt-3 flex items-center gap-2 rounded-2xl bg-night/85 px-3 py-2 text-sm font-semibold text-white">
+                    <p className="mx-4 mt-3 flex items-center gap-2 rounded-2xl bg-white px-3 py-2 text-sm font-semibold text-ink">
                         <LockIcon size={16} className="shrink-0" />
                         Beat {previousBoss.title} to open this place!
                     </p>
@@ -155,19 +145,18 @@ export default function ZoneScene({
                             const to = points[i + 1];
                             const d = curve(from, to);
                             const travelled = zone.nodes[i].stars > 0;
-                            const reachable = zone.nodes[i + 1].unlocked;
-                            return (
-                                <g key={i} opacity={reachable ? 1 : 0.55}>
-                                    <path d={d} fill="none" stroke={travelled ? "#E0A100" : scene.edge} strokeWidth="34" strokeLinecap="round" />
-                                    <path d={d} fill="none" stroke={travelled ? "#FFE08A" : scene.road} strokeWidth="26" strokeLinecap="round" />
+                                            return (
+                                <g key={i}>
+                                    <path d={d} fill="none" stroke={travelled ? "#FFC21A" : scene.edge} strokeWidth="34" strokeLinecap="round" />
+                                    <path d={d} fill="none" stroke={travelled ? "#FFC21A" : scene.road} strokeWidth="26" strokeLinecap="round" />
                                     <path
                                         d={d}
                                         fill="none"
-                                        stroke={travelled ? "#F2A900" : scene.edge}
+                                        stroke={travelled ? "#FFFFFF" : "#1D4ED8"}
                                         strokeWidth="3"
                                         strokeLinecap="round"
                                         strokeDasharray="1 11"
-                                        opacity={travelled ? 0.9 : 0.6}
+                                        opacity={1}
                                     />
                                 </g>
                             );
@@ -229,14 +218,14 @@ function StageNode({
     const done = node.stars > 0;
     const size = isBoss ? 88 : 72;
 
-    // Face colours: grey stone (locked), gold (ready), green (cleared), crimson (boss to beat)
+    // Flat faces: white (locked), yellow (ready / boss to beat), blue (cleared)
     const face = locked
-        ? { bg: "linear-gradient(180deg,#D8DCEA,#A4ADC6)", ledge: "#7C86A3", ring: "#EEF0F8" }
+        ? { bg: "#FFFFFF", ring: "#1D4ED8" }
         : isBoss && !done
-        ? { bg: "linear-gradient(180deg,#FF8A7A,#FF4D3D)", ledge: "#A82217", ring: "#FCD116" }
+        ? { bg: "#FFC21A", ring: "#1D4ED8" }
         : done
-        ? { bg: "linear-gradient(180deg,#7BEBAE,#22C06B)", ledge: "#12904A", ring: "#FFFFFF" }
-        : { bg: "linear-gradient(180deg,#FFE27A,#FFC21A)", ledge: "#C98600", ring: "#FFFFFF" };
+        ? { bg: "#1D4ED8", ring: "#FFFFFF" }
+        : { bg: "#FFC21A", ring: "#FFFFFF" };
 
     // The avatar stands on the roomier side of the road
     const avatarSide = point.x < W / 2 ? "left" : "right";
@@ -272,12 +261,10 @@ function StageNode({
                     >
                         <div className="animate-float">
                             <span
-                                className={`relative block whitespace-nowrap rounded-full px-3.5 py-1 font-display text-sm font-semibold uppercase tracking-wide text-white shadow-lg ring-2 ring-white ${
-                                    isBoss ? "bg-danger" : "bg-success"
-                                }`}
+                                className="relative block whitespace-nowrap rounded-full bg-secondary px-3.5 py-1 font-display text-sm font-semibold uppercase tracking-wide text-ink shadow-lg ring-2 ring-white"
                             >
                                 {isBoss ? "Boss fight" : "Start"}
-                                <span aria-hidden className={`absolute left-1/2 top-full h-2.5 w-2.5 -translate-x-1/2 -translate-y-1.5 rotate-45 ${isBoss ? "bg-danger" : "bg-success"}`} />
+                                <span aria-hidden className="absolute left-1/2 top-full h-2.5 w-2.5 -translate-x-1/2 -translate-y-1.5 rotate-45 bg-secondary" />
                             </span>
                         </div>
                     </div>
@@ -304,30 +291,29 @@ function StageNode({
                     disabled={locked}
                     onClick={() => onPlay(node)}
                     aria-label={`${node.title}${locked ? " (locked)" : ""}`}
-                    className={`node-btn relative flex h-full w-full items-center justify-center rounded-full ${locked ? "cursor-not-allowed text-ink/45" : ""}`}
+                    className={`node-btn relative flex h-full w-full items-center justify-center rounded-full ${locked ? "cursor-not-allowed text-primary" : ""}`}
                     style={
                         {
-                            backgroundImage: face.bg,
+                            backgroundColor: face.bg,
                             border: `${isBoss ? 5 : 4}px solid ${face.ring}`,
-                            "--ledge": face.ledge,
                         } as React.CSSProperties
                     }
                 >
                     {locked ? (
                         <LockIcon size={isBoss ? 36 : 30} />
                     ) : (
-                        // A soft disc behind the picture keeps any emoji readable on any face colour
+                        // A white disc behind the picture keeps any emoji readable on any face colour
                         <span
-                            className="flex items-center justify-center rounded-full bg-white/45"
+                            className="flex items-center justify-center rounded-full bg-white"
                             style={{ width: size * 0.68, height: size * 0.68 }}
                         >
-                            <span className="leading-none drop-shadow-[0_2px_0_rgba(0,0,0,0.15)]" style={{ fontSize: isBoss ? 38 : 30 }}>
+                            <span className="leading-none" style={{ fontSize: isBoss ? 38 : 30 }}>
                                 {node.emoji}
                             </span>
                         </span>
                     )}
                     {done && !locked && (
-                        <span className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full bg-success text-white ring-[3px] ring-white">
+                        <span className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full bg-primary text-white ring-[3px] ring-white">
                             <CheckIcon size={16} />
                         </span>
                     )}
@@ -340,11 +326,11 @@ function StageNode({
                 style={{ top: "calc(100% + 14px)" }}
             >
                 {isBoss && !locked && (
-                    <span className="mb-0.5 inline-block rounded-full bg-danger px-2 py-px font-display text-[10px] font-semibold uppercase tracking-widest text-white">
+                    <span className="mb-0.5 inline-block rounded-full bg-secondary px-2 py-px font-display text-[10px] font-semibold uppercase tracking-widest text-ink">
                         Boss
                     </span>
                 )}
-                <p className="mx-auto w-max max-w-[8.5rem] rounded-xl bg-white/85 px-2.5 py-1 font-display text-[13px] font-semibold leading-tight text-ink shadow-sm backdrop-blur-sm">
+                <p className="mx-auto w-max max-w-[8.5rem] rounded-xl bg-white px-2.5 py-1 font-display text-[13px] font-semibold leading-tight text-ink shadow-sm">
                     {node.title}
                 </p>
             </div>

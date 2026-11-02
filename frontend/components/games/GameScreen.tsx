@@ -29,7 +29,7 @@ export function GameTopBar({
                 aria-label="Back"
                 onClick={onBack}
                 className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full shadow-lift ring-1 active:scale-95 ${
-                    dark ? "bg-white/10 text-white ring-white/15" : "bg-white text-ink-soft ring-ink/5"
+                    dark ? "bg-white text-primary ring-white" : "bg-white text-ink-soft ring-primary/20"
                 }`}
             >
                 <ChevronLeftIcon size={24} />
@@ -68,7 +68,7 @@ export function GameIntro({
         <div className="card relative isolate mx-auto max-w-md overflow-hidden text-center !p-7 sm:!p-9">
             <div
                 aria-hidden
-                className="absolute inset-x-0 top-0 -z-10 h-40 bg-gradient-to-b from-primary/15 to-transparent"
+                className="absolute inset-x-0 top-0 -z-10 h-40 bg-transparent"
             />
             <div className="mx-auto mb-4 flex h-24 w-24 items-center justify-center rounded-full bg-secondary/25 text-6xl ring-4 ring-white">
                 <span className="animate-float">{emoji}</span>

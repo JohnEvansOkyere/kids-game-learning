@@ -33,7 +33,7 @@ export default function ModalSheet({ children, onClose, variant = "center", dism
             role="dialog"
             aria-modal="true"
             aria-label={label}
-            className={`animate-fade-in fixed inset-0 z-50 flex justify-center bg-night/75 backdrop-blur-sm ${
+            className={`animate-fade-in fixed inset-0 z-50 flex justify-center bg-night/90 ${
                 isSheet ? "items-end sm:items-center sm:p-4" : "items-center p-4"
             }`}
             onClick={dismissible ? onClose : undefined}
