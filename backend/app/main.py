@@ -2,12 +2,26 @@
 MathChampions Ghana - FastAPI Backend
 Main application entry point
 """
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
+from app.core.database import connect_db, disconnect_db
 from app.routers import auth, students, questions, game, world, events, skills
 
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    # Connect at startup so a missing/broken Prisma engine fails the deploy
+    # instead of surfacing as 500s on the first request.
+    await connect_db()
+    yield
+    await disconnect_db()
+
+
 app = FastAPI(
+    lifespan=lifespan,
     title="MathChampions Ghana API",
     description="Backend API for MathChampions Ghana - Math Battle Game for Kids",
     version="1.0.0"

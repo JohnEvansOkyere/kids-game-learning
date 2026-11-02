@@ -1,0 +1,4 @@
+
+# Prisma engine copied in by scripts/render_build.sh
+prisma-query-engine-*
+.prisma-binaries/
