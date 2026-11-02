@@ -1,7 +1,7 @@
 /**
  * AuthShell - the parent's first impression
  *
- * A calm, confident brand panel (what the app does for your child) beside the form.
+ * A flat blue brand panel (what the app does for your child) beside the form.
  * Stacks on phones: brand band on top, the form card overlapping it.
  * Only claims features that exist today.
  */
@@ -26,14 +26,6 @@ export default function AuthShell({ title, subtitle, children, footer }: AuthShe
         <div className="min-h-screen lg:grid lg:grid-cols-[5fr_6fr]">
             {/* Pinned to the screen on desktop so the promise stays in view while a long form scrolls */}
             <aside className="relative overflow-hidden bg-night text-white lg:sticky lg:top-0 lg:h-screen lg:self-start">
-                <div
-                    aria-hidden
-                    className="absolute inset-0"
-                    style={{
-                        backgroundImage:
-                            "radial-gradient(520px 320px at 85% 0%, rgb(90 68 242 / 0.6), transparent 70%), radial-gradient(460px 300px at 0% 100%, rgb(255 194 26 / 0.2), transparent 70%)",
-                    }}
-                />
                 <div className="relative mx-auto flex h-full max-w-xl flex-col px-6 pb-16 pt-7 lg:px-14 lg:pb-16 lg:pt-14">
                     <div className="flex items-center gap-3">
                         <LogoMark size={40} />
@@ -44,14 +36,14 @@ export default function AuthShell({ title, subtitle, children, footer }: AuthShe
                         <h1 className="font-display text-[2rem] font-semibold leading-[1.08] sm:text-4xl lg:text-5xl">
                             Maths they&rsquo;ll <span className="text-secondary">ask</span> to play.
                         </h1>
-                        <p className="mt-3 max-w-md text-lg font-semibold text-white/75">
+                        <p className="mt-3 max-w-md text-lg font-semibold text-white">
                             A Ghana adventure that builds real maths skills, from KG1 to P3.
                         </p>
 
                         <ul className="mt-8 hidden space-y-3.5 lg:block">
                             {PROMISES.map((text) => (
-                                <li key={text} className="flex items-center gap-3 font-semibold text-white/90">
-                                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-secondary text-[#4a2b00]">
+                                <li key={text} className="flex items-center gap-3 font-semibold text-white">
+                                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-secondary text-ink">
                                         <CheckIcon size={16} />
                                     </span>
                                     {text}

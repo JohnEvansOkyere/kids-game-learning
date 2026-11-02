@@ -163,7 +163,7 @@ function Person({
             </g>
 
             {/* Sweat */}
-            <ellipse cx={cx + 14 * dir} cy={headY - 4} rx={1.5} ry={2.5} fill="#87CEEB" opacity={0.7}>
+            <ellipse cx={cx + 14 * dir} cy={headY - 4} rx={1.5} ry={2.5} fill="#FFFFFF" opacity={0.9}>
                 <animate attributeName="cy" values={`${headY - 4};${headY + 8};${headY - 4}`} dur="0.9s" repeatCount="indefinite" />
                 <animate attributeName="opacity" values="0.7;0;0.7" dur="0.9s" repeatCount="indefinite" />
             </ellipse>
@@ -183,43 +183,27 @@ function TugOfWarScene({
     const baseY = 140;
     const ropeY = baseY - 37;
 
-    const t1 = { shirt: "#2563EB", s1: "#F59E0B", s2: "#10B981" };
-    const t2 = { shirt: "#DC2626", s1: "#F59E0B", s2: "#F97316" };
+    const t1 = { shirt: "#FFFFFF", s1: "#FFC21A", s2: "#FFFFFF" };
+    const t2 = { shirt: "#FFC21A", s1: "#FFFFFF", s2: "#FFC21A" };
 
     return (
         <svg viewBox="0 0 500 160" className="w-full h-full min-h-[120px]" preserveAspectRatio="xMidYMid meet">
-            <defs>
-                <linearGradient id="skyBg" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#87CEEB" stopOpacity={0.15} />
-                    <stop offset="100%" stopColor="#4CAF50" stopOpacity={0.05} />
-                </linearGradient>
-            </defs>
-            <rect x={0} y={0} width={500} height={160} fill="url(#skyBg)" />
-            <image href="/zones/village.webp" x={0} y={0} width={500} height={150} preserveAspectRatio="xMidYMid slice" opacity={0.34} />
-
-            {/* Ground */}
-            <rect x={0} y={baseY + 4} width={500} height={16} fill="#4CAF50" rx={2} />
-            <rect x={0} y={baseY + 8} width={500} height={12} fill="#388E3C" rx={2} />
-            {[25, 75, 140, 210, 290, 360, 425, 475].map((gx) => (
-                <path key={gx} d={`M ${gx} ${baseY + 4} L ${gx + 3} ${baseY - 4} L ${gx + 6} ${baseY + 4}`} fill="#66BB6A" />
-            ))}
+            {/* Ground: one flat white strip on the blue stage */}
+            <rect x={0} y={baseY + 4} width={500} height={16} fill="#FFFFFF" rx={2} />
 
             {/* ── Bright center line — the finish mark ── */}
-            <line x1={250} y1={6} x2={250} y2={baseY + 4} stroke="#FFD700" strokeWidth={4} />
-            <line x1={250} y1={6} x2={250} y2={baseY + 4} stroke="#FF6B00" strokeWidth={2} strokeDasharray="8,4" />
-            {/* Glow effect */}
-            <line x1={250} y1={6} x2={250} y2={baseY + 4} stroke="#FFD700" strokeWidth={8} opacity={0.15} />
+            <line x1={250} y1={6} x2={250} y2={baseY + 4} stroke="#FFC21A" strokeWidth={4} strokeDasharray="8,4" />
 
             {/* ── Entire scene shifts: characters + rope move together ── */}
             <g style={{ transform: `translateX(${shiftX}px)`, transition: "transform 0.35s ease-out" }}>
 
                 {/* Rope */}
-                <line x1={15} y1={ropeY} x2={485} y2={ropeY} stroke="#D4A843" strokeWidth={7} strokeLinecap="round" />
-                <line x1={15} y1={ropeY} x2={485} y2={ropeY} stroke="#8B6914" strokeWidth={4.5} strokeDasharray="3,5" strokeLinecap="round" />
+                <line x1={15} y1={ropeY} x2={485} y2={ropeY} stroke="#FFC21A" strokeWidth={7} strokeLinecap="round" />
+                <line x1={15} y1={ropeY} x2={485} y2={ropeY} stroke="#FFFFFF" strokeWidth={4.5} strokeDasharray="3,5" strokeLinecap="round" />
 
-                {/* Red ribbon at rope center */}
-                <rect x={248} y={ropeY - 14} width={4} height={18} rx={1} fill="#DC2626" />
-                <polygon points={`248,${ropeY - 14} 238,${ropeY - 7} 248,${ropeY}`} fill="#DC2626" opacity={0.8} />
+                {/* Ribbon at rope center */}
+                <rect x={248} y={ropeY - 14} width={4} height={18} rx={1} fill="#FFFFFF" />
+                <polygon points={`248,${ropeY - 14} 238,${ropeY - 7} 248,${ropeY}`} fill="#FFFFFF" />
 
                 {/* Team 1 — heaving fast */}
                 <g>
@@ -337,32 +321,32 @@ function TeamPanel({
     onSubmit: () => void;
 }) {
     const isT1 = team === 1;
-    // Team 1 is the brand indigo, team 2 the warm coral: same colours as the rest of the app
-    const headerBg = isT1 ? "bg-gradient-to-b from-primary-light to-primary" : "bg-gradient-to-b from-danger-light to-danger";
-    const ringClr = isT1 ? "ring-primary-light/50" : "ring-danger-light/50";
+    // Team 1 is blue with white text, team 2 yellow with blue text. The panel itself is white.
+    const headerBg = isT1 ? "bg-primary text-white" : "bg-secondary text-ink";
+    const ringClr = "ring-white";
 
-    let answerRing = "ring-white/15";
-    let answerBg = "bg-night-deep/70";
+    let answerRing = "ring-primary/30";
+    let answerBg = "bg-primary/10";
     if (flash === "correct") {
-        answerRing = "ring-success-light";
-        answerBg = "bg-success/25";
+        answerRing = "ring-primary";
+        answerBg = "bg-primary/20";
     } else if (flash === "wrong") {
-        answerRing = "ring-danger-light";
-        answerBg = "bg-danger/25";
+        answerRing = "ring-secondary";
+        answerBg = "bg-secondary/40";
     }
 
     return (
         <div
-            className={`rounded-3xl ring-2 ${ringClr} overflow-hidden bg-night-light/60 min-w-0 flex flex-col h-full ${className}`}
+            className={`rounded-3xl ring-2 ${ringClr} overflow-hidden bg-white min-w-0 flex flex-col h-full ${className}`}
         >
             {/* Coloured header */}
             <div
                 className={`${headerBg} px-3 py-2 sm:px-4 sm:py-3 items-center justify-between flex-shrink-0 ${stacked ? "hidden sm:flex" : "flex"}`}
             >
-                <span className="font-display font-semibold text-white text-lg sm:text-xl md:text-2xl truncate">
+                <span className="font-display font-semibold text-lg sm:text-xl md:text-2xl truncate">
                     {label ?? `Team ${team}`}
                 </span>
-                <span className="bg-white/25 text-white font-display font-semibold rounded-full w-9 h-9 sm:w-10 sm:h-10 md:w-12 md:h-12 flex items-center justify-center text-lg sm:text-xl md:text-2xl">
+                <span className="bg-white text-primary font-display font-semibold rounded-full w-9 h-9 sm:w-10 sm:h-10 md:w-12 md:h-12 flex items-center justify-center text-lg sm:text-xl md:text-2xl">
                     {score}
                 </span>
             </div>
@@ -370,14 +354,14 @@ function TeamPanel({
             <div className="p-3 sm:p-4 pb-5 sm:pb-7 md:pb-9 flex-1 flex flex-col min-h-0">
                 {/* Question */}
                 <div
-                    className={`text-white font-display font-semibold ${stacked ? "text-3xl" : "text-base"} sm:text-lg md:text-xl lg:text-3xl text-center mb-2 sm:mb-3 min-h-[44px] sm:min-h-[52px] md:min-h-[64px] flex items-center justify-center leading-tight flex-shrink-0`}
+                    className={`text-ink font-display font-semibold ${stacked ? "text-3xl" : "text-base"} sm:text-lg md:text-xl lg:text-3xl text-center mb-2 sm:mb-3 min-h-[44px] sm:min-h-[52px] md:min-h-[64px] flex items-center justify-center leading-tight flex-shrink-0`}
                 >
                     {question?.questionText || "..."}
                 </div>
 
                 {/* Answer display */}
                 <div
-                    className={`w-full ${stacked ? "h-14" : "h-12"} sm:h-14 md:h-16 rounded-2xl ring-2 ${answerRing} ${answerBg} flex items-center justify-end px-4 font-display text-xl sm:text-2xl md:text-3xl font-semibold mb-2 sm:mb-3 transition-colors flex-shrink-0 ${answer ? "text-white" : "text-white/35"} ${flash === "wrong" ? "animate-shake" : ""}`}
+                    className={`w-full ${stacked ? "h-14" : "h-12"} sm:h-14 md:h-16 rounded-2xl ring-2 ${answerRing} ${answerBg} flex items-center justify-end px-4 font-display text-xl sm:text-2xl md:text-3xl font-semibold mb-2 sm:mb-3 transition-colors flex-shrink-0 ${answer ? "text-ink" : "text-ink-muted"} ${flash === "wrong" ? "animate-shake" : ""}`}
                 >
                     {answer || "0"}
                 </div>
@@ -409,21 +393,21 @@ function BossPanel({
     className?: string;
 }) {
     return (
-        <div className={`rounded-3xl ring-2 ring-danger-light/50 overflow-hidden bg-night-light/60 min-w-0 flex flex-col h-full ${className}`}>
-            <div className="bg-gradient-to-b from-danger-light to-danger px-3 py-2 sm:px-4 sm:py-3 flex items-center justify-between flex-shrink-0">
+        <div className={`rounded-3xl ring-2 ring-white overflow-hidden bg-white min-w-0 flex flex-col h-full ${className}`}>
+            <div className="bg-secondary text-ink px-3 py-2 sm:px-4 sm:py-3 flex items-center justify-between flex-shrink-0">
                 {/* Phone: one slim strip with the boss's face. Tablet and up: the big panel below. */}
-                <span className="font-display font-semibold text-white text-lg sm:hidden truncate">
+                <span className="font-display font-semibold text-lg sm:hidden truncate">
                     <span className={`inline-block ${gameOver ? "" : "animate-float"}`}>{boss.emoji}</span> {boss.title}
                 </span>
-                <span className="hidden sm:inline font-display font-semibold text-white text-xl md:text-2xl truncate">BOSS</span>
-                <span className="bg-white/25 text-white font-display font-semibold rounded-full w-9 h-9 sm:w-10 sm:h-10 md:w-12 md:h-12 flex items-center justify-center text-lg sm:text-xl md:text-2xl">
+                <span className="hidden sm:inline font-display font-semibold text-xl md:text-2xl truncate">BOSS</span>
+                <span className="bg-white text-primary font-display font-semibold rounded-full w-9 h-9 sm:w-10 sm:h-10 md:w-12 md:h-12 flex items-center justify-center text-lg sm:text-xl md:text-2xl">
                     {score}
                 </span>
             </div>
             <div className="hidden sm:flex flex-1 flex-col items-center justify-center p-4 text-center">
                 <span className={`text-6xl sm:text-7xl md:text-8xl ${gameOver ? "" : "animate-float"}`}>{boss.emoji}</span>
-                <p className="text-white font-display font-semibold text-lg sm:text-xl md:text-2xl mt-3">{boss.title}</p>
-                {!gameOver && <p className="text-white/60 mt-2 animate-pulse">is pulling the rope...</p>}
+                <p className="text-ink font-display font-semibold text-lg sm:text-xl md:text-2xl mt-3">{boss.title}</p>
+                {!gameOver && <p className="text-ink-muted mt-2 animate-pulse">is pulling the rope...</p>}
             </div>
         </div>
     );
@@ -728,15 +712,10 @@ export default function BattlePage() {
                     )}
                     {boss ? (
                         <div className="card relative isolate mx-auto mb-6 max-w-md overflow-hidden text-center !p-7 sm:!p-9">
-                            {/* A red glow behind the boss so the card reads as "a challenge" */}
-                            <div
-                                aria-hidden
-                                className="absolute inset-x-0 top-0 -z-10 h-44 bg-gradient-to-b from-danger/20 to-transparent"
-                            />
                             <p className="mb-1 font-display text-sm font-semibold uppercase tracking-widest text-danger-dark">
                                 Boss battle
                             </p>
-                            <div className="mx-auto mb-4 flex h-28 w-28 items-center justify-center rounded-full bg-danger/15 text-7xl ring-4 ring-white">
+                            <div className="mx-auto mb-4 flex h-28 w-28 items-center justify-center rounded-full bg-secondary text-7xl ring-4 ring-white">
                                 <span className="animate-float">{boss.emoji}</span>
                             </div>
                             <h1 className="font-display text-3xl font-semibold text-ink sm:text-4xl">{boss.title}</h1>
@@ -924,7 +903,7 @@ export default function BattlePage() {
         // Boss battle on a phone stacks vertically and the page may scroll; everything
         // else (tablet and up, and two-player mode) fills the viewport as before
         <div
-            className={`flex flex-col bg-gradient-to-b from-night via-night to-night-deep ${
+            className={`flex flex-col bg-night ${
                 boss ? "min-h-screen sm:h-screen sm:overflow-hidden" : "min-h-screen h-screen overflow-hidden"
             }`}
         >
@@ -938,14 +917,14 @@ export default function BattlePage() {
                         if (boss) router.push("/play");
                         else setStep("setup");
                     }}
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/10 text-white ring-1 ring-white/15 active:scale-95"
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-primary active:scale-95"
                 >
                     <ChevronLeftIcon size={22} />
                 </button>
                 <h1 className="text-white font-display font-semibold text-base sm:text-lg md:text-xl lg:text-2xl tracking-wide text-center truncate mx-2">
                     Tug of War
                 </h1>
-                <span className="rounded-full bg-white/10 px-3 py-1 font-display text-sm font-semibold text-white/80 ring-1 ring-white/15 whitespace-nowrap">
+                <span className="rounded-full bg-white px-3 py-1 font-display text-sm font-semibold text-primary whitespace-nowrap">
                     ⏱ {formatTime(timer)}
                 </span>
             </div>
@@ -996,7 +975,7 @@ export default function BattlePage() {
                                 <span className="text-white font-display text-xl sm:text-2xl md:text-3xl lg:text-4xl font-semibold">
                                     {scoreP1}
                                 </span>
-                                <span className="text-white/40 text-lg sm:text-xl">–</span>
+                                <span className="text-white text-lg sm:text-xl">–</span>
                                 <span className="text-white font-display text-xl sm:text-2xl md:text-3xl lg:text-4xl font-semibold">
                                     {scoreP2}
                                 </span>

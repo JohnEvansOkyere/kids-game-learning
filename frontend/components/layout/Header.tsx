@@ -8,7 +8,7 @@ import { GhanaFlag, LogoMark } from "@/components/ui/Icons";
 
 export default function Header() {
     return (
-        <header className="sticky top-0 z-30 bg-white/85 backdrop-blur-md">
+        <header className="sticky top-0 z-30 bg-white shadow-sm">
             <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
                 <div className="flex items-center gap-2.5">
                     <LogoMark size={32} />

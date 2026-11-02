@@ -129,18 +129,17 @@ export default function CountingCatchPage() {
                         {playing && (
                             <div className="flex flex-1 items-center gap-3">
                                 <div
-                                    className="h-5 flex-1 overflow-hidden rounded-full bg-ink/10 ring-1 ring-ink/5"
+                                    className="h-5 flex-1 overflow-hidden rounded-full bg-white ring-2 ring-primary"
                                     role="progressbar"
                                     aria-valuemin={0}
                                     aria-valuemax={GOAL}
                                     aria-valuenow={Math.min(count, GOAL)}
                                 >
                                     <div
-                                        className="relative h-full rounded-full bg-gradient-to-b from-secondary-light to-secondary transition-all duration-300"
+                                        className="relative h-full rounded-full bg-secondary transition-all duration-300"
                                         style={{ width: `${(Math.min(count, GOAL) / GOAL) * 100}%` }}
                                     >
-                                        <span className="absolute inset-x-2 top-[3px] h-1 rounded-full bg-white/50" />
-                                    </div>
+                                                    </div>
                                 </div>
                                 <HudChip>
                                     <StarIcon size={22} />
@@ -174,18 +173,9 @@ export default function CountingCatchPage() {
                         </GameDone>
                     ) : (
                         <div
-                            className="relative h-[440px] overflow-hidden rounded-4xl bg-[#76c7dc] shadow-card ring-4 ring-white"
-                            style={{ touchAction: "manipulation", backgroundImage: "linear-gradient(180deg,rgba(32,86,122,.14),rgba(22,72,55,.3)),url('/zones/farm.webp')", backgroundPosition: "center", backgroundSize: "cover" }}
+                            className="relative h-[440px] overflow-hidden rounded-4xl bg-primary shadow-card ring-4 ring-white"
+                            style={{ touchAction: "manipulation" }}
                         >
-                            {/* Drifting clouds */}
-                            <div aria-hidden className="pointer-events-none absolute inset-0">
-                                <div className="animate-drift absolute left-[8%] top-[12%] h-8 w-28 rounded-full bg-white/70 blur-[1px]" />
-                                <div
-                                    className="animate-drift absolute right-[10%] top-[28%] h-7 w-24 rounded-full bg-white/60 blur-[1px]"
-                                    style={{ animationDelay: "-6s" }}
-                                />
-                            </div>
-
                             {stars.map(
                                 (star) =>
                                     !star.caught && (
@@ -202,19 +192,16 @@ export default function CountingCatchPage() {
                                             }}
                                             onClick={() => catchStar(star.id)}
                                         >
-                                            <span className="pointer-events-none drop-shadow-[0_0_10px_rgba(255,226,122,0.95)]">
+                                            <span className="pointer-events-none ">
                                                 <StarIcon size={58} />
                                             </span>
                                         </button>
                                     )
                             )}
 
-                            {/* Rolling hills */}
-                            <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-28">
-                                <div className="absolute -left-[10%] bottom-0 h-24 w-[70%] rounded-t-[100%] bg-gradient-to-b from-success to-success-dark opacity-80" />
-                                <div className="absolute -right-[10%] bottom-0 h-20 w-[75%] rounded-t-[100%] bg-gradient-to-b from-success-light to-success" />
-                            </div>
-                            <p className="absolute inset-x-0 bottom-3 text-center font-display text-lg font-semibold text-white drop-shadow">
+                            {/* Flat white ground */}
+                            <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-12 rounded-t-[100%] bg-white" />
+                            <p className="absolute inset-x-0 bottom-3 text-center font-display text-lg font-semibold text-primary">
                                 Tap the stars!
                             </p>
                         </div>

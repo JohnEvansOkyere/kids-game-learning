@@ -18,9 +18,9 @@ const MIN_ANSWERS_TO_JUDGE = 5;
 
 const STATUS_STYLES: Record<MasteryStatus, { label: string; chip: string }> = {
     not_started: { label: "Not started", chip: "bg-ink/5 text-ink-muted" },
-    learning: { label: "Learning", chip: "bg-orange-100 text-orange-800" },
-    practising: { label: "Practising", chip: "bg-sky-100 text-sky-800" },
-    mastered: { label: "Mastered", chip: "bg-success/15 text-success-dark" },
+    learning: { label: "Learning", chip: "bg-secondary text-ink" },
+    practising: { label: "Practising", chip: "bg-primary/10 text-primary" },
+    mastered: { label: "Mastered", chip: "bg-primary text-white" },
 };
 
 function needsHelp(m: SkillMastery) {
@@ -50,10 +50,10 @@ export default function SkillMap({ mastery, gradeLevel }: { mastery: SkillMaster
                         <div className="h-full rounded-full bg-success" style={{ width: `${masteredPercent}%` }} />
                     </div>
                 </div>
-                <div className="rounded-2xl bg-orange-50 p-4">
+                <div className="rounded-2xl bg-secondary/20 p-4">
                     <p className="text-sm font-semibold text-ink-soft">Needs more practice</p>
                     {weak.length ? (
-                        <p className="mt-1 font-display text-lg font-semibold text-orange-800">
+                        <p className="mt-1 font-display text-lg font-semibold text-ink">
                             {weak.map((m) => m.skill.title).join(", ")}
                         </p>
                     ) : (

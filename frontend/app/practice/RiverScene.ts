@@ -106,7 +106,7 @@ export class RiverScene extends Phaser.Scene {
                 fontSize: "34px",
                 fontStyle: "bold",
                 color: "#ffffff",
-                stroke: "#000000",
+                stroke: "#102A6B",
                 strokeThickness: 6,
             })
             .setOrigin(0.5)
@@ -344,7 +344,7 @@ export class RiverScene extends Phaser.Scene {
                     this.hero.setAngle(0);
                     this.spawnSplash(this.hero.x, SWIM_Y + 6, 18);
                     this.shake(180, 0.006);
-                    this.showLabel("SPLASH! SWIM!", "#90caf9");
+                    this.showLabel("SPLASH! SWIM!", "#FFFFFF");
                     this.tweens.add({ targets: this.croc, alpha: 1, duration: 900, delay: 300 });
                     this.time.delayedCall(500, () => (this.busy = false));
                 },
@@ -367,7 +367,7 @@ export class RiverScene extends Phaser.Scene {
             if (grabbedRope) {
                 this.crocPushback = 150;
                 this.tweens.add({ targets: this, crocPushback: 0, duration: 3000, delay: 800, ease: "Sine.easeIn" });
-                this.showLabel("YOU GRABBED THE ROPE!", "#69f0ae");
+                this.showLabel("YOU GRABBED THE ROPE!", "#FFC21A");
             } else if (fx.close) {
                 // The jaws slam shut right behind the swimmer
                 this.openJaws(true);
@@ -375,12 +375,12 @@ export class RiverScene extends Phaser.Scene {
                     this.openJaws(false);
                     playChompSFX();
                 });
-                this.showLabel("😅 PHEW! JUST IN TIME!", "#ffeb3b");
+                this.showLabel("😅 PHEW! JUST IN TIME!", "#FFC21A");
             } else if (fx.fast || fx.streak) {
                 // A burst of speed shoves the croc back for a moment
                 this.crocPushback = fx.streak ? 120 : 80;
                 this.tweens.add({ targets: this, crocPushback: 0, duration: 2500, delay: 600, ease: "Sine.easeIn" });
-                this.showLabel(fx.streak ? "🔥 SUPER SWIMMER!" : "⚡ TURBO STROKE!", "#ffeb3b");
+                this.showLabel(fx.streak ? "🔥 SUPER SWIMMER!" : "⚡ TURBO STROKE!", "#FFC21A");
             }
             this.swimTo(this.strokeX(this.strokes), fx.fast ? 380 : 600);
             this.spawnSplash(this.hero.x + 10, SWIM_Y, fx.fast ? 14 : 8);
@@ -431,7 +431,7 @@ export class RiverScene extends Phaser.Scene {
                 playChompSFX();
                 this.shake(220, 0.012);
                 this.spawnSplash(this.hero.x - 20, SWIM_Y + 4, 16);
-                this.showLabel("SNAP!", "#ff5252");
+                this.showLabel("SNAP!", "#FFC21A");
                 // Hero flinches forward, just escaping
                 this.tweens.add({ targets: this.hero, x: this.hero.x + 14, angle: 12, duration: 120, yoyo: true });
                 this.tweens.add({
@@ -468,7 +468,7 @@ export class RiverScene extends Phaser.Scene {
                 playChompSFX();
                 this.shake(300, 0.012);
                 this.spawnSplash(this.hero.x, SWIM_Y, 22);
-                this.showLabel("CHOMP! IT GOT YOUR SANDAL!", "#ff5252");
+                this.showLabel("CHOMP! IT GOT YOUR SANDAL!", "#FFC21A");
                 // Leap back to the canoe in fright
                 this.tweens.add({ targets: this.hero, x: CANOE_X, duration: 700, delay: 200, ease: "Sine.easeInOut" });
                 this.tweens.add({
@@ -509,7 +509,7 @@ export class RiverScene extends Phaser.Scene {
         this.rope = this.add.graphics();
 
         this.tweens.add({ targets: boat, x: this.hero.x + 90, duration: 900, ease: "Sine.easeOut" });
-        this.showLabel("A ROPE! GET THIS ONE RIGHT!", "#ffeb3b");
+        this.showLabel("A ROPE! GET THIS ONE RIGHT!", "#FFC21A");
     }
 
     private endRescue() {
@@ -537,7 +537,7 @@ export class RiverScene extends Phaser.Scene {
                 duration: 500,
                 ease: "Quad.easeOut",
                 onComplete: () => {
-                    this.showLabel("SAFE! YOU ESCAPED!", "#69f0ae");
+                    this.showLabel("SAFE! YOU ESCAPED!", "#FFC21A");
                     this.spawnSparkles(this.hero.x, this.hero.y - 20);
                     this.tweens.add({ targets: this.hero, y: 135, duration: 260, yoyo: true, repeat: 3, ease: "Quad.easeOut" });
                     this.heroArms.forEach((a, i) => a.setAngle(i === 0 ? 160 : -160));

@@ -55,7 +55,7 @@ const RiverGameCanvas = forwardRef<RiverGameHandle, Props>(({ totalQuestions, da
                     width: 900,
                     height: 400,
                     parent,
-                    backgroundColor: "#1a1033",
+                    backgroundColor: "#1D4ED8",
                     scene: [Scene],
                     scale: {
                         mode: PhaserLib.Scale.FIT,
@@ -86,11 +86,11 @@ const RiverGameCanvas = forwardRef<RiverGameHandle, Props>(({ totalQuestions, da
 
     return (
         <div className="mb-4 flex w-full justify-center">
-            {/* Storm-coloured while Phaser loads, so there is no blank flash */}
+            {/* Blue while Phaser loads, so there is no blank flash */}
             <div
                 ref={containerRef}
-                className={`w-full max-w-4xl overflow-hidden rounded-3xl bg-gradient-to-b from-[#1a1033] to-[#0c1f2b] shadow-card ring-4 transition-colors duration-300 ${
-                    danger ? "ring-danger" : "ring-white"
+                className={`w-full max-w-4xl overflow-hidden rounded-3xl bg-primary shadow-card ring-4 transition-colors duration-300 ${
+                    danger ? "ring-secondary" : "ring-white"
                 }`}
                 style={{ aspectRatio: "900/400" }}
             />

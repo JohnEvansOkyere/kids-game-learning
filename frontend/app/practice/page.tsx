@@ -196,7 +196,7 @@ export default function PracticePage() {
         riverGameRef.current?.setDanger(0);
         questionStartTimeRef.current = Date.now();
         if (currentIndex > 0 && currentIndex === questions.length - 1) {
-            riverGameRef.current?.announce("🏝️ LAST STROKE! SWIM!", "#69f0ae");
+            riverGameRef.current?.announce("🏝️ LAST STROKE! SWIM!", "#FFC21A");
         }
 
         const interval = setInterval(() => {
@@ -543,7 +543,7 @@ export default function PracticePage() {
     if (!student) {
         return (
             <div className="min-h-screen bg-background flex items-center justify-center">
-                <p className="text-2xl text-gray-600">Loading...</p>
+                <p className="text-2xl text-ink-soft">Loading...</p>
             </div>
         );
     }
@@ -563,7 +563,7 @@ export default function PracticePage() {
                                 </Button>
                             </>
                         ) : (
-                            <p className="text-2xl text-gray-600">
+                            <p className="text-2xl text-ink-soft">
                                 {node ? `${node.emoji} ${node.title}` : "Getting ready..."}
                             </p>
                         )}
@@ -576,7 +576,7 @@ export default function PracticePage() {
                             <h2 className="text-4xl font-bold text-primary mb-2">
                                 Choose a Practice Topic 🎯
                             </h2>
-                            <p className="text-xl text-gray-600">
+                            <p className="text-xl text-ink-soft">
                                 {student.name}, pick a topic to start practicing!
                             </p>
                             {offline && (
@@ -604,7 +604,7 @@ export default function PracticePage() {
                                     <h3 className="text-2xl font-bold text-primary mb-2">
                                         {t.label}
                                     </h3>
-                                    <p className="text-gray-600">Grades: {t.grades}</p>
+                                    <p className="text-ink-soft">Grades: {t.grades}</p>
                                     <Button
                                         variant="primary"
                                         className="mt-4"
@@ -644,7 +644,7 @@ export default function PracticePage() {
                                 <ChevronLeftIcon size={24} />
                             </button>
                             <div
-                                className="h-5 flex-1 overflow-hidden rounded-full bg-ink/10 ring-1 ring-ink/5"
+                                className="h-5 flex-1 overflow-hidden rounded-full bg-white ring-2 ring-primary"
                                 role="progressbar"
                                 aria-valuemin={0}
                                 aria-valuemax={100}

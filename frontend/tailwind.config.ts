@@ -3,10 +3,10 @@ import type { Config } from "tailwindcss";
 /**
  * Design tokens
  *
- * Kid screens: bright scenes, chunky 3D buttons, gold = reward, green = go/correct.
- * Parent screens: the same palette, but quiet - white surfaces, ink text, lots of air.
- * Token names (primary, secondary, success, danger, background) are unchanged so
- * every existing page picks up the new look.
+ * Three colours only: blue (#1D4ED8), white, and yellow (#FFC21A) for accents and
+ * text on blue. Every surface is flat blue or flat white - no gradients, no second
+ * shade of blue. Token names (primary, secondary, success, danger, night, background)
+ * are unchanged so every existing page picks up the palette.
  */
 const config: Config = {
     content: [
@@ -17,51 +17,48 @@ const config: Config = {
     theme: {
         extend: {
             colors: {
-                // Brand: royal indigo
+                // One flat blue. light/dark are deliberately identical so a gradient
+                // or hover shade never introduces a second, brighter or deeper blue.
                 primary: {
-                    DEFAULT: "#5A44F2",
-                    light: "#8B7CFF",
-                    dark: "#3F2BD0",
+                    DEFAULT: "#1D4ED8",
+                    light: "#1D4ED8",
+                    dark: "#1D4ED8",
                 },
-                // Reward gold: coins, stars, "play" nodes
+                // The only accent: yellow (stars, coins, highlights, text on blue)
                 secondary: {
                     DEFAULT: "#FFC21A",
-                    light: "#FFD85E",
-                    dark: "#F29F05",
+                    light: "#FFC21A",
+                    dark: "#FFC21A",
                 },
-                // Go / correct
+                // Palette is blue / white / yellow only. "Go / correct" is the brand blue.
                 success: {
-                    DEFAULT: "#22C06B",
-                    light: "#5EDC96",
-                    dark: "#13984F",
+                    DEFAULT: "#1D4ED8",
+                    light: "#1D4ED8",
+                    dark: "#1D4ED8",
                 },
-                // Boss / wrong (kept warm, never harsh)
+                // "Wrong / try again" is yellow (shown with an icon and text, not colour alone).
+                // danger-dark is the navy ink used for text sitting on a yellow tint.
                 danger: {
-                    DEFAULT: "#FF5A4E",
-                    light: "#FF8A80",
-                    dark: "#E0372B",
+                    DEFAULT: "#FFC21A",
+                    light: "#FFC21A",
+                    dark: "#102A6B",
                 },
-                // Warm paper
+                // Surfaces are white or blue, nothing in between
                 background: {
-                    DEFAULT: "#FFF8EC",
-                    dark: "#FFEFD3",
+                    DEFAULT: "#FFFFFF",
+                    dark: "#FFFFFF",
                 },
-                // Text
+                // Text on white: blue-navy
                 ink: {
-                    DEFAULT: "#231B5C",
-                    soft: "#4A4380",
-                    muted: "#7B76A3",
+                    DEFAULT: "#102A6B",
+                    soft: "#2B4690",
+                    muted: "#5A6FA8",
                 },
-                // Dark surfaces: HUD, dock, profile lobby
+                // Dark surfaces (HUD, dock, brand panel) are simply the brand blue
                 night: {
-                    DEFAULT: "#1A1445",
-                    light: "#2A2166",
-                    deep: "#100B2E",
-                },
-                ghana: {
-                    red: "#CE1126",
-                    gold: "#FCD116",
-                    green: "#006B3F",
+                    DEFAULT: "#1D4ED8",
+                    light: "#1D4ED8",
+                    deep: "#1D4ED8",
                 },
             },
             fontFamily: {
@@ -78,9 +75,9 @@ const config: Config = {
                 "4xl": "2rem",
             },
             boxShadow: {
-                // A soft "ledge" under cards, plus a long diffuse shadow
-                card: "0 4px 0 rgb(35 27 92 / 0.07), 0 18px 34px -18px rgb(35 27 92 / 0.35)",
-                lift: "0 2px 0 rgb(35 27 92 / 0.06), 0 10px 24px -12px rgb(35 27 92 / 0.28)",
+                // Soft diffuse shadows only; no coloured ledge
+                card: "0 1px 2px rgb(16 42 107 / 0.06), 0 12px 28px -14px rgb(16 42 107 / 0.28)",
+                lift: "0 1px 2px rgb(16 42 107 / 0.05), 0 8px 20px -12px rgb(16 42 107 / 0.24)",
             },
             minHeight: {
                 touch: "60px", // Minimum touch target

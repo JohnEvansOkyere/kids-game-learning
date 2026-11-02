@@ -10,20 +10,17 @@ type IconProps = { className?: string; size?: number };
 
 const STAR_PATH = "M12 2.6l2.8 6 6.6.8-4.9 4.6 1.3 6.6L12 17.2l-5.8 3.4 1.3-6.6L2.6 9.4l6.6-.8L12 2.6z";
 
-/** Gold star; `filled=false` is an empty socket (dark, inset) */
+/** Gold star; `filled=false` is an empty outline (white with a yellow edge) */
 export function StarIcon({ filled = true, size = 24, className = "" }: IconProps & { filled?: boolean }) {
     return (
         <svg width={size} height={size} viewBox="0 0 24 24" className={className} aria-hidden>
             <path
                 d={STAR_PATH}
-                fill={filled ? "#FFC21A" : "rgb(35 27 92 / 0.22)"}
-                stroke={filled ? "#E08A00" : "rgb(35 27 92 / 0.35)"}
+                fill={filled ? "#FFC21A" : "#FFFFFF"}
+                stroke="#FFC21A"
                 strokeWidth="1.6"
                 strokeLinejoin="round"
             />
-            {filled && (
-                <path d="M8.2 8.6l3.1-4.2" stroke="#FFF3B0" strokeWidth="1.8" strokeLinecap="round" opacity="0.9" />
-            )}
         </svg>
     );
 }
@@ -32,10 +29,9 @@ export function StarIcon({ filled = true, size = 24, className = "" }: IconProps
 export function CoinIcon({ size = 24, className = "" }: IconProps) {
     return (
         <svg width={size} height={size} viewBox="0 0 24 24" className={className} aria-hidden>
-            <circle cx="12" cy="12" r="10" fill="#FFC21A" stroke="#D98A00" strokeWidth="1.8" />
-            <circle cx="12" cy="12" r="7.2" fill="#FFD85E" stroke="#F0A800" strokeWidth="1.2" />
-            <path d={STAR_PATH} fill="#3A2A00" transform="translate(12 12) scale(0.5) translate(-12 -12.2)" />
-            <path d="M6.2 9.4A6.6 6.6 0 0 1 10 6" stroke="#FFF3B0" strokeWidth="1.4" strokeLinecap="round" fill="none" />
+            <circle cx="12" cy="12" r="10" fill="#FFC21A" />
+            <circle cx="12" cy="12" r="7.2" fill="none" stroke="#1D4ED8" strokeWidth="1.2" />
+            <path d={STAR_PATH} fill="#1D4ED8" transform="translate(12 12) scale(0.5) translate(-12 -12.2)" />
         </svg>
     );
 }
@@ -62,12 +58,11 @@ export function HeartIcon({ filled = true, size = 24, className = "" }: IconProp
         <svg width={size} height={size} viewBox="0 0 24 24" className={className} aria-hidden>
             <path
                 d="M12 20.4S3.5 15 3.5 8.9A4.6 4.6 0 0 1 12 6.6a4.6 4.6 0 0 1 8.5 2.3C20.5 15 12 20.4 12 20.4z"
-                fill={filled ? "#FF4D3D" : "rgb(35 27 92 / 0.15)"}
-                stroke={filled ? "#C42B1D" : "rgb(35 27 92 / 0.25)"}
+                fill={filled ? "#1D4ED8" : "rgb(29 78 216 / 0.15)"}
+                stroke={filled ? "#1D4ED8" : "rgb(29 78 216 / 0.3)"}
                 strokeWidth="1.6"
                 strokeLinejoin="round"
             />
-            {filled && <path d="M7.2 8.6a2.2 2.2 0 0 1 2.3-1.7" stroke="#FFB3A8" strokeWidth="1.6" strokeLinecap="round" fill="none" />}
         </svg>
     );
 }
@@ -165,13 +160,10 @@ export function GhanaFlag({ width = 22, className = "" }: { width?: number; clas
 export function LogoMark({ size = 36, className = "" }: IconProps) {
     return (
         <svg width={size} height={size} viewBox="0 0 40 40" className={className} aria-hidden>
-            <rect width="40" height="40" rx="12" fill="#5A44F2" />
-            <rect y="0" width="40" height="40" rx="12" fill="none" stroke="rgb(255 255 255 / 0.25)" strokeWidth="2" />
-            <path d={STAR_PATH} fill="#FFC21A" stroke="#E08A00" strokeWidth="1.2" strokeLinejoin="round" transform="translate(20 18.5) scale(1.15) translate(-12 -11.6)" />
-            <rect x="9" y="31" width="22" height="3" rx="1.5" fill="#FFFFFF" opacity="0.9" />
-            <rect x="9" y="31" width="7.3" height="3" rx="1.5" fill="#CE1126" />
-            <rect x="16.3" y="31" width="7.4" height="3" fill="#FCD116" />
-            <rect x="23.7" y="31" width="7.3" height="3" rx="1.5" fill="#006B3F" />
+            <rect width="40" height="40" rx="12" fill="#1D4ED8" />
+            <rect y="0" width="40" height="40" rx="12" fill="none" stroke="#FFFFFF" strokeWidth="2" />
+            <path d={STAR_PATH} fill="#FFC21A" stroke="#FFC21A" strokeWidth="1.2" strokeLinejoin="round" transform="translate(20 18.5) scale(1.15) translate(-12 -11.6)" />
+            <rect x="9" y="31" width="22" height="3" rx="1.5" fill="#FFFFFF" />
         </svg>
     );
 }

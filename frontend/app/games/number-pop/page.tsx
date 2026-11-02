@@ -93,17 +93,16 @@ export default function NumberPopPage() {
                         {playing && (
                             <div className="flex flex-1 items-center gap-3">
                                 <div
-                                    className="h-5 flex-1 overflow-hidden rounded-full bg-ink/10 ring-1 ring-ink/5"
+                                    className="h-5 flex-1 overflow-hidden rounded-full bg-white ring-2 ring-primary"
                                     role="progressbar"
                                     aria-valuemin={0}
                                     aria-valuemax={MAX_NUMBER}
                                     aria-valuenow={nextToPop - 1}
                                 >
                                     <div
-                                        className="relative h-full rounded-full bg-gradient-to-b from-success-light to-success transition-all duration-300"
+                                        className="relative h-full rounded-full bg-primary transition-all duration-300"
                                         style={{ width: `${((nextToPop - 1) / MAX_NUMBER) * 100}%` }}
                                     >
-                                        <span className="absolute inset-x-2 top-[3px] h-1 rounded-full bg-white/40" />
                                     </div>
                                 </div>
                                 <HudChip>Tap {nextToPop} →</HudChip>
@@ -138,12 +137,12 @@ export default function NumberPopPage() {
                             {/* Reserved height so the grid doesn't jump when the hint appears */}
                             <div className="mb-3 flex min-h-[3rem] items-center justify-center">
                                 {wrongTapped !== null && (
-                                    <p className="animate-shake rounded-full bg-danger/10 px-4 py-2 font-display text-lg font-semibold text-danger-dark">
+                                    <p className="animate-shake rounded-full bg-secondary px-4 py-2 font-display text-lg font-semibold text-ink">
                                         Tap {nextToPop} next, not {wrongTapped}! 👆
                                     </p>
                                 )}
                             </div>
-                            <div className="grid grid-cols-2 gap-4 rounded-4xl bg-[#e7bc7e] p-4 shadow-card sm:grid-cols-3" style={{ backgroundImage: "linear-gradient(180deg,rgba(255,246,226,.36),rgba(255,246,226,.7)),url('/zones/village.webp')", backgroundPosition: "center", backgroundSize: "cover" }}>
+                            <div className="grid grid-cols-2 gap-4 rounded-4xl bg-white p-4 shadow-card ring-2 ring-primary sm:grid-cols-3">
                                 {shuffled.map((n) => {
                                     const done = n < nextToPop;
                                     const isNext = n === nextToPop;
@@ -151,12 +150,12 @@ export default function NumberPopPage() {
                                     return (
                                         <Button
                                             key={n}
-                                            variant={isWrong ? "danger" : done ? "success" : isNext ? "primary" : "neutral"}
+                                            variant={isWrong ? "danger" : isNext ? "primary" : "neutral"}
                                             onClick={() => handlePop(n)}
                                             disabled={done}
                                             aria-label={done ? `${n}, done` : String(n)}
-                                            // Popped keys fade to pale green, so their digits go dark green to stay readable
-                                            className={`!min-h-[88px] !text-4xl ${done ? "!text-success-dark" : ""} ${isWrong ? "animate-shake !opacity-100 ![filter:none]" : ""}`}
+                                            // Popped keys fade out with a tick, so they read as done
+                                            className={`!min-h-[88px] !text-4xl  ${isWrong ? "animate-shake !opacity-100 ![filter:none]" : ""}`}
                                         >
                                             {n}
                                             {done && <CheckIcon size={24} />}

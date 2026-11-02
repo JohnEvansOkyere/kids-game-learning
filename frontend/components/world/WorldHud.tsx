@@ -16,7 +16,7 @@ function Pill({ icon, value, popKey }: { icon: React.ReactNode; value: number; p
     return (
         <span
             key={popKey}
-            className={`inline-flex h-10 items-center gap-1.5 whitespace-nowrap rounded-full bg-white/10 pl-2 pr-3 font-display text-base font-semibold text-white ${
+            className={`inline-flex h-10 items-center gap-1.5 whitespace-nowrap rounded-full bg-primary pl-2 pr-3 font-display text-base font-semibold text-white ${
                 popKey !== undefined ? "animate-pop" : ""
             }`}
         >
@@ -39,7 +39,7 @@ export function WorldHud({
 }) {
     return (
         <div className="sticky top-0 z-30 px-3 pt-[max(0.5rem,env(safe-area-inset-top))]">
-            <div className="mx-auto flex max-w-[480px] items-center gap-2 rounded-[1.75rem] bg-night/90 p-1.5 pr-2 shadow-[0_10px_30px_-10px_rgba(16,11,46,0.6)] ring-1 ring-white/10 backdrop-blur-md">
+            <div className="mx-auto flex max-w-[480px] items-center gap-2 rounded-[1.75rem] bg-white p-1.5 pr-2 shadow-card ring-2 ring-primary">
                 <button
                     type="button"
                     onClick={onSwitchPlayer}
@@ -48,10 +48,10 @@ export function WorldHud({
                 >
                     <Avatar plate type={student.avatar} size="small" outfit={world?.equippedItem?.emoji} />
                     <span className="min-w-0 leading-tight">
-                        <span className="block max-w-[7rem] truncate font-display text-base font-semibold text-white">
+                        <span className="block max-w-[7rem] truncate font-display text-base font-semibold text-ink">
                             {student.name}
                         </span>
-                        <span className="block text-[11px] font-bold uppercase tracking-wider text-white/60">
+                        <span className="block text-[11px] font-bold uppercase tracking-wider text-ink-muted">
                             {student.gradeLevel}
                         </span>
                     </span>
@@ -90,7 +90,7 @@ function DockButton({
             disabled={disabled}
             aria-current={active ? "page" : undefined}
             className={`relative flex min-h-[3.75rem] flex-1 flex-col items-center justify-center gap-0.5 rounded-[1.25rem] font-display text-[11px] font-semibold transition-colors disabled:opacity-45 ${
-                active ? "bg-white/15 text-white" : "text-white/70 active:bg-white/10"
+                active ? "bg-primary text-white" : "text-primary active:bg-primary/10"
             }`}
         >
             <span className={wiggle ? "animate-wiggle" : ""}>{icon}</span>
@@ -98,7 +98,7 @@ function DockButton({
             {badge && (
                 <span
                     aria-hidden
-                    className="absolute right-[27%] top-1.5 h-3 w-3 animate-pulse rounded-full bg-secondary ring-2 ring-night"
+                    className="absolute right-[27%] top-1.5 h-3 w-3 animate-pulse rounded-full bg-secondary ring-2 ring-white"
                 />
             )}
         </button>
@@ -125,7 +125,7 @@ export function Dock({
             aria-label="Adventure menu"
             className="pointer-events-none fixed inset-x-0 bottom-0 z-30 flex justify-center px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
         >
-            <div className="pointer-events-auto flex w-full max-w-[420px] items-stretch gap-1 rounded-[1.75rem] bg-night/90 p-1.5 shadow-[0_14px_34px_-10px_rgba(16,11,46,0.7)] ring-1 ring-white/10 backdrop-blur-md">
+            <div className="pointer-events-auto flex w-full max-w-[420px] items-stretch gap-1 rounded-[1.75rem] bg-white p-1.5 shadow-card ring-2 ring-primary">
                 <DockButton icon={<MapIcon size={26} />} label="Map" active onClick={onMap} />
                 <DockButton
                     icon={<GiftIcon size={26} />}
@@ -216,17 +216,17 @@ export function GoalCard({
 
     return (
         <div className="mx-auto max-w-[480px] px-3">
-            <div className="flex items-center gap-3 rounded-3xl bg-white p-3 pr-3.5 shadow-card ring-1 ring-ink/5">
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-secondary/25 text-3xl">
+            <div className="flex items-center gap-3 rounded-3xl bg-white p-3 pr-3.5 shadow-card ring-2 ring-white">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-secondary text-3xl">
                     {goal.emoji}
                 </div>
                 <div className="min-w-0 flex-1">
                     <p className="font-display text-base font-semibold leading-tight text-ink">{goal.title}</p>
                     <p className="text-sm font-semibold text-ink-muted">{goal.detail}</p>
                     {goal.progress !== undefined && (
-                        <div className="mt-1.5 h-2.5 overflow-hidden rounded-full bg-ink/10">
+                        <div className="mt-1.5 h-2.5 overflow-hidden rounded-full bg-primary/15">
                             <div
-                                className="h-full rounded-full bg-gradient-to-r from-secondary-light to-secondary"
+                                className="h-full rounded-full bg-secondary"
                                 style={{ width: `${Math.min(100, goal.progress)}%` }}
                             />
                         </div>

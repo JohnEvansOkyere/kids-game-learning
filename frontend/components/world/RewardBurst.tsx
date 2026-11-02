@@ -8,7 +8,7 @@
  */
 import React from "react";
 
-const COLORS = ["#FFC21A", "#FF5A4E", "#22C06B", "#5A44F2", "#38BDF8", "#FF8FB1"];
+const COLORS = ["#FFC21A", "#1D4ED8"];
 const PIECES = 26;
 
 export default function RewardBurst({ confetti = true, className = "" }: { confetti?: boolean; className?: string }) {
