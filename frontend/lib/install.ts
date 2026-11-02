@@ -70,3 +70,29 @@ export function dismissInstallPrompt() {
         // storage blocked - the card will just show again next time
     }
 }
+
+export function isAndroid() {
+    return /android/i.test(navigator.userAgent);
+}
+
+// Set right after sign-up so the first screen offers the home-screen icon straight away
+const JUST_REGISTERED_KEY = "justRegistered";
+
+export function markJustRegistered() {
+    try {
+        sessionStorage.setItem(JUST_REGISTERED_KEY, "1");
+    } catch {
+        // storage blocked - the popup will still come on a later visit
+    }
+}
+
+/** True once, on the first check after sign-up */
+export function takeJustRegistered() {
+    try {
+        const was = sessionStorage.getItem(JUST_REGISTERED_KEY) === "1";
+        sessionStorage.removeItem(JUST_REGISTERED_KEY);
+        return was;
+    } catch {
+        return false;
+    }
+}

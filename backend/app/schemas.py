@@ -37,7 +37,7 @@ class TokenData(BaseModel):
 
 class ParentBase(BaseModel):
     name: str
-    phoneNumber: str
+    phoneNumber: Optional[str] = None
 
 
 class ParentCreate(ParentBase):
@@ -59,7 +59,7 @@ class StudentBase(BaseModel):
     name: str
     avatar: str  # lion, elephant, cheetah, monkey, eagle, fish
     gradeLevel: str  # KG1, KG2, P1, P2, P3
-    dateOfBirth: date
+    dateOfBirth: Optional[date] = None
 
 
 class StudentCreate(StudentBase):
@@ -84,16 +84,17 @@ class StudentResponse(StudentBase):
 class RegisterRequest(BaseModel):
     """Complete registration with parent and first child"""
     # User/Parent info
+    # Only what's needed to start playing; no email verification for now
     email: EmailStr
     password: str = Field(..., min_length=6)
-    parentName: str
-    phoneNumber: str
-    
+    parentName: str = Field(..., min_length=1)
+    phoneNumber: Optional[str] = None
+
     # First child info
-    childName: str
-    childAvatar: str
+    childName: str = Field(..., min_length=1)
+    childAvatar: str = "lion"
     childGradeLevel: str
-    childDateOfBirth: date
+    childDateOfBirth: Optional[date] = None
 
 
 class RegisterResponse(BaseModel):

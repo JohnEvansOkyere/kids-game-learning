@@ -34,6 +34,33 @@ async def test_register_and_login(client):
     assert len(data["students"]) == 1
 
 
+async def test_register_minimal_gives_instant_access(client):
+    """Sign-up needs only name, email, password, child name and grade - no verification step"""
+    res = await client.post(
+        "/api/auth/register",
+        json={
+            "email": "quick@example.com",
+            "password": "password123",
+            "parentName": "Ama",
+            "childName": "Kojo",
+            "childGradeLevel": "KG2",
+        },
+    )
+    assert res.status_code == 201
+    data = res.json()
+    assert data["parent"]["phoneNumber"] is None
+    assert data["student"]["avatar"] == "lion"
+    assert data["student"]["dateOfBirth"] is None
+
+    # The returned token works straight away
+    me = await client.get(
+        "/api/auth/me",
+        headers={"Authorization": f"Bearer {data['token']['access_token']}"},
+    )
+    assert me.status_code == 200
+    assert me.json()["students"][0]["name"] == "Kojo"
+
+
 async def test_student_create_and_list(client):
     reg = await register_parent(client, email="parent2@example.com")
     token = reg["token"]["access_token"]

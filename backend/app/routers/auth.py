@@ -74,20 +74,21 @@ async def register(request: RegisterRequest, db: Prisma = Depends(get_db)):
             data={
                 "userId": user.id,
                 "name": request.parentName,
-                "phoneNumber": request.phoneNumber
+                "phoneNumber": (request.phoneNumber or "").strip() or None
             }
         )
         logger.info(f"Created parent profile for: {parent.name}")
         
-        # Create first student profile
-        # Convert date to datetime for Prisma
-        from datetime import datetime as dt
-        dob_datetime = dt.combine(request.childDateOfBirth, dt.min.time())
-        
+        # Create first student profile (Prisma wants a datetime for the date column)
+        dob_datetime = (
+            datetime.combine(request.childDateOfBirth, datetime.min.time())
+            if request.childDateOfBirth else None
+        )
+
         student = await db.student.create(
             data={
                 "parentId": parent.id,
-                "name": request.childName,
+                "name": request.childName.strip(),
                 "avatar": request.childAvatar,
                 "gradeLevel": request.childGradeLevel,
                 "dateOfBirth": dob_datetime

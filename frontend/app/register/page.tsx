@@ -7,6 +7,7 @@ import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import Avatar from "@/components/ui/Avatar";
 import { authApi, getErrorMessage } from "@/lib/api";
+import { markJustRegistered } from "@/lib/install";
 import type { AvatarType, GradeLevel } from "@/lib/types";
 
 const avatarOptions: AvatarType[] = ["lion", "elephant", "cheetah", "monkey", "eagle", "fish"];
@@ -22,13 +23,11 @@ export default function RegisterPage() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [parentName, setParentName] = useState("");
-    const [phoneNumber, setPhoneNumber] = useState("");
 
     // Child info
     const [childName, setChildName] = useState("");
     const [childAvatar, setChildAvatar] = useState<AvatarType>("lion");
     const [childGradeLevel, setChildGradeLevel] = useState<GradeLevel>("P1");
-    const [childDateOfBirth, setChildDateOfBirth] = useState("");
 
     const handleParentSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -42,24 +41,24 @@ export default function RegisterPage() {
         setLoading(true);
 
         try {
+            // No email check: the account is ready the moment this returns
             const response = await authApi.register({
-                email,
+                email: email.trim(),
                 password,
-                parentName,
-                phoneNumber,
-                childName,
+                parentName: parentName.trim(),
+                childName: childName.trim(),
                 childAvatar,
                 childGradeLevel,
-                childDateOfBirth,
             });
 
-            // Store user data
             localStorage.setItem("user", JSON.stringify(response.user));
             localStorage.setItem("parent", JSON.stringify(response.parent));
             localStorage.setItem("students", JSON.stringify([response.student]));
+            // Only one child so far, so skip "Who's playing?" and open their world
+            localStorage.setItem("selectedStudent", JSON.stringify(response.student));
+            markJustRegistered();
 
-            // Redirect to dashboard
-            router.push("/dashboard");
+            router.replace("/play");
         } catch (err) {
             setError(getErrorMessage(err));
         } finally {
@@ -85,7 +84,7 @@ export default function RegisterPage() {
     return (
         <AuthShell
             title={step === 1 ? "Create your account" : "Meet your champion"}
-            subtitle={step === 1 ? "It takes about a minute." : "Tell us about your child."}
+            subtitle={step === 1 ? "Free, and ready in under a minute. No email check." : "Who will be playing?"}
             footer={
                 step === 1 ? (
                     <>
@@ -123,16 +122,6 @@ export default function RegisterPage() {
                     />
 
                     <Input
-                        type="tel"
-                        label="Phone number (Ghana)"
-                        placeholder="+233241234567"
-                        autoComplete="tel"
-                        value={phoneNumber}
-                        onChange={(e) => setPhoneNumber(e.target.value)}
-                        required
-                    />
-
-                    <Input
                         type="password"
                         label="Password"
                         placeholder="At least 6 characters"
@@ -144,7 +133,7 @@ export default function RegisterPage() {
                     />
 
                     <Button type="submit" variant="primary" fullWidth className="!mt-6">
-                        Next: add your child
+                        Next
                     </Button>
                 </form>
             )}
@@ -156,6 +145,8 @@ export default function RegisterPage() {
                         type="text"
                         label="Child's name"
                         placeholder="Kofi"
+                        autoComplete="off"
+                        autoFocus
                         value={childName}
                         onChange={(e) => setChildName(e.target.value)}
                         required
@@ -186,7 +177,7 @@ export default function RegisterPage() {
 
                     <div>
                         <p className="mb-2 text-sm font-semibold text-ink-soft">Grade</p>
-                        <div className="grid grid-cols-5 gap-2">
+                        <div className="grid grid-cols-5 gap-1.5 sm:gap-2">
                             {gradeOptions.map((grade) => (
                                 <button
                                     key={grade}
@@ -201,26 +192,18 @@ export default function RegisterPage() {
                         </div>
                     </div>
 
-                    <Input
-                        type="date"
-                        label="Date of birth"
-                        value={childDateOfBirth}
-                        onChange={(e) => setChildDateOfBirth(e.target.value)}
-                        required
-                    />
-
                     {error && (
                         <div role="alert" className="rounded-2xl bg-danger/10 p-3 text-center font-semibold text-danger-dark ring-2 ring-danger/30">
                             {error}
                         </div>
                     )}
 
-                    <div className="flex gap-3 pt-1">
+                    <div className="flex gap-2 pt-1 sm:gap-3">
                         <Button type="button" variant="neutral" onClick={() => setStep(1)} className="flex-1">
                             Back
                         </Button>
                         <Button type="submit" variant="success" disabled={loading} className="flex-[2]">
-                            {loading ? "Creating…" : "Start the adventure"}
+                            {loading ? "Setting up…" : "Start playing"}
                         </Button>
                     </div>
                 </form>

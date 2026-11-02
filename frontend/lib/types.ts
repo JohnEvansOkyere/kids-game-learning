@@ -14,7 +14,7 @@ export interface Parent {
     id: string;
     userId: string;
     name: string;
-    phoneNumber: string;
+    phoneNumber: string | null;
     createdAt: string;
 }
 
@@ -24,7 +24,7 @@ export interface Student {
     name: string;
     avatar: AvatarType;
     gradeLevel: GradeLevel;
-    dateOfBirth: string;
+    dateOfBirth: string | null;
     createdAt: string;
 }
 
@@ -43,11 +43,11 @@ export interface RegisterRequest {
     email: string;
     password: string;
     parentName: string;
-    phoneNumber: string;
+    phoneNumber?: string;
     childName: string;
     childAvatar: AvatarType;
     childGradeLevel: GradeLevel;
-    childDateOfBirth: string; // YYYY-MM-DD format
+    childDateOfBirth?: string; // YYYY-MM-DD format
 }
 
 export interface RegisterResponse {
