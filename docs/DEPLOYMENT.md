@@ -39,6 +39,7 @@ In the Web Service **Environment** tab, add:
 | `DATABASE_URL` | Neon pooled connection string | Or the URL supplied by a linked Render Postgres database. |
 | `JWT_SECRET_KEY` | Long random string | e.g. `openssl rand -hex 32`. |
 | `CORS_ORIGINS` | Your frontend URL(s) | e.g. `https://mathchampions.vercel.app` or `https://your-app.vercel.app`. Comma-separated for multiple. |
+| `SUPER_ADMIN_EMAILS` | Your admin email(s) | Comma-separated. Only these accounts can open `/admin` (app performance). Empty = nobody. |
 | `REDIS_URL` | (optional) | Omit if not using Redis; or use Upstash Redis URL. |
 
 Do **not** commit real secrets to Git. Set them only in Render.

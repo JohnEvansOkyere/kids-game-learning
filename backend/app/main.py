@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.core.database import connect_db, disconnect_db
-from app.routers import auth, students, questions, game, world, events, skills
+from app.routers import auth, students, questions, game, world, events, skills, admin
 
 
 @asynccontextmanager
@@ -44,6 +44,7 @@ app.include_router(game.router, prefix="/api/game", tags=["Game"])
 app.include_router(world.router, prefix="/api/world", tags=["Adventure World"])
 app.include_router(events.router, prefix="/api/events", tags=["Analytics"])
 app.include_router(skills.router, prefix="/api/skills", tags=["Skills"])
+app.include_router(admin.router, prefix="/api/admin", tags=["Admin"])
 
 @app.get("/")
 async def root():

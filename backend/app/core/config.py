@@ -24,6 +24,9 @@ class Settings(BaseSettings):
 
     # Admin
     ADMIN_SEED_TOKEN: str = "change-me"
+    # Comma-separated emails allowed into the /admin performance page.
+    # Empty by default, so nobody is an admin until this is set.
+    SUPER_ADMIN_EMAILS: str = ""
 
     # CORS: comma-separated in env, e.g. https://yourapp.vercel.app,https://yourapp.com
     # Keep this as a string so pydantic-settings does not try to JSON-decode
@@ -33,6 +36,10 @@ class Settings(BaseSettings):
     # App Settings
     PROJECT_NAME: str = "MathChampions Ghana"
     VERSION: str = "1.0.0"
+
+    @property
+    def super_admin_emails(self) -> List[str]:
+        return [e.strip().lower() for e in self.SUPER_ADMIN_EMAILS.split(",") if e.strip()]
 
     @property
     def cors_origins(self) -> List[str]:

@@ -299,3 +299,36 @@ export interface OfflineSessionRequest {
     startedAt: string;
     answers: OfflineSessionAnswer[];
 }
+
+// ============ Admin Types ============
+
+export interface AdminDay {
+    day: string;
+}
+
+export interface AdminOverview {
+    generatedAt: string;
+    windowDays: number;
+    totals: {
+        parents: number;
+        students: number;
+        sessions: number;
+        completedSessions: number;
+        completionPercent: number;
+        answers: number;
+        accuracyPercent: number;
+        questions: number;
+    };
+    activeStudents: { day: number; week: number; month: number };
+    signupsByDay: (AdminDay & { signups: number })[];
+    activityByDay: (AdminDay & { sessions: number; players: number; correct: number; attempted: number })[];
+    byTopic: { topic: string; sessions: number; accuracyPercent: number; avgSeconds: number }[];
+    byGrade: { grade: string; students: number; sessions: number; accuracyPercent: number }[];
+    hardestQuestions: { text: string; grade: string; topic: string; attempts: number; accuracyPercent: number }[];
+    retention: {
+        players: number;
+        day1ReturnPercent: number | null;
+        day7ReturnPercent: number | null;
+        avgSessionsPerWeek: number | null;
+    };
+}
