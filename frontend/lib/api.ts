@@ -25,6 +25,7 @@ import type {
     SkillMastery,
     OfflinePack,
     OfflineSessionRequest,
+    AdminOverview,
 } from "./types";
 
 const configuredApiUrl = process.env.NEXT_PUBLIC_API_URL?.trim().replace(/\/+$/, "") || "";
@@ -176,6 +177,13 @@ export const worldApi = {
 export const eventsApi = {
     async record(studentId: string, events: AnalyticsEvent[]): Promise<{ accepted: number }> {
         const response = await api.post<{ accepted: number }>(`/api/events/${studentId}`, { events });
+        return response.data;
+    },
+};
+
+export const adminApi = {
+    async overview(days = 30): Promise<AdminOverview> {
+        const response = await api.get<AdminOverview>("/api/admin/overview", { params: { days } });
         return response.data;
     },
 };
